@@ -1,0 +1,3 @@
+To compile:
+clang++ -std=c++11 subsets.cpp -o subsets
+
