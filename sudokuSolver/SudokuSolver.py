@@ -176,9 +176,22 @@ if len(sys.argv)>1:
       print "Invalid number: there are only",n,"games"
       sys.exit(0)
    n=v
-print "Playing game number ",n
 
+print "Playing game number ",n
 x=Game()
+
+for i in range(9):
+   for j in range(9):
+      v = testGame[n][i][j]
+      if v != 0:
+         print v,
+      else:
+         print '.',
+      if j==2 or j==5: print "|",
+   print
+   if i==2 or i==5: print "------+-------+------"
+print
+
 for i in range(9):
    for j in range(9):
       v = testGame[n][i][j]
