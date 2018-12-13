@@ -1,9 +1,11 @@
 #!/usr/bin/python
 
 # Sudoku Solver
-from colors import red,green,blue
+
 import logging
 import sys
+# The following import requires: sudo pip install ansicolors
+from colors import red,green,blue
 
 class SolutionNotValid(Exception):
    def __init__(self,mismatch):
@@ -101,7 +103,7 @@ class Game:
 
 testGame=[]
 
-# testgame[0]
+# testgame[0]: DEMO
 testGame.append([
 [4,0,0,0,0,0,0,0,0],
 [0,0,0,0,0,0,0,0,0],
@@ -113,7 +115,7 @@ testGame.append([
 [0,0,0,0,0,0,0,0,0],
 [0,0,0,0,0,0,0,0,0]])
 
-# testgame[1]
+# testgame[1]: EASY
 testGame.append([
 [0,0,0,8,0,5,0,1,3],
 [0,0,0,2,0,3,6,0,0],
@@ -125,7 +127,7 @@ testGame.append([
 [1,0,2,0,8,0,4,7,0],
 [0,0,4,9,1,0,0,3,8]])
 
-# testgame[2]
+# testgame[2]: MEDIUM
 testGame.append([
 [0,0,0,4,0,0,2,0,0],
 [0,0,2,0,0,0,0,1,8],
@@ -137,7 +139,7 @@ testGame.append([
 [9,0,0,6,0,2,0,5,0],
 [0,0,0,0,0,0,7,0,2]])
 
-# testgame[3]
+# testgame[3]: HARD
 testGame.append([
 [0,0,7,0,0,0,3,0,2],
 [2,0,0,0,0,5,0,1,0],
@@ -148,6 +150,18 @@ testGame.append([
 [0,0,0,1,0,3,0,0,0],
 [8,0,1,0,6,0,0,0,0],
 [0,0,0,7,0,0,0,6,3]])
+
+# testgame[4]: EXPERT
+testGame.append([
+[0,0,0,1,9,0,0,0,0],
+[0,0,0,0,0,5,0,0,8],
+[0,5,0,8,3,0,4,9,6],
+[0,0,5,0,0,0,0,6,0],
+[0,0,0,4,0,0,1,8,0],
+[9,2,0,0,0,1,0,0,0],
+[6,0,0,0,0,0,0,3,0],
+[0,0,0,2,0,0,6,4,0],
+[5,0,0,6,0,3,0,0,0]])
 
 logging.basicConfig(filename='sudoku.log',level=logging.DEBUG)
 
