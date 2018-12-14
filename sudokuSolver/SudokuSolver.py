@@ -80,12 +80,80 @@ class Game:
                try:
                   foundValue = self.cells[i][j].delValues(values)
                except SolutionNotValid as problem:
-                  raise SolutionNotValid(problem+" in block ["+repr(self.row)+"]["+repr(self.col)+"]")
+                  raise SolutionNotValid(str(problem)+" in block ["+repr(row)+"]["+repr(col)+"]")
                # If deleting that value results in a single possibility for that cell, we just found a value
                # We need to eliminate that value from all other cells in this cube, row, and column
                if foundValue:
                   v=self.cells[i][j].getValues()
                   self.setValue(i,j,v[0])
+#
+#  Cell.findLoners
+#     This function finds if a value appears only once in the list of possibilities for a row, col, or cube
+#
+   def findLoners(self):
+      nbChanges=0
+      # See if a number can be in a single cell for 1 row
+      for row in range(9):
+         # Find the list of unknown digits on that row
+         unknowns=[1,2,3,4,5,6,7,8,9]
+         for col in range(9):
+            v=self.cells[row][col].getValues()
+            if len(v) == 1:
+               unknowns.remove(v[0])
+         n=0
+         for v in unknowns:
+            for col in range(9):
+               if v in self.cells[row][col].getValues():
+                  n += 1
+                  c = col
+            if n == 1:
+               # The value can be onlyin column c of that row
+               self.setValue(row,c,v)
+               nbChanges += 1
+      # See if a number can be in a single cell for 1 column
+      for col in range(9):
+         # Find the list of unknown digits on that column
+         unknowns=[1,2,3,4,5,6,7,8,9]
+         for row in range(9):
+            v=self.cells[row][col].getValues()
+            if len(v) == 1:
+               unknowns.remove(v[0])
+         n=0
+         for v in unknowns:
+            for row in range(9):
+               if v in self.cells[row][col].getValues():
+                  n += 1
+                  r = row
+            if n == 1:
+               # The value can be only in row r of that column
+               self.setValue(r,col,v)
+               nbChanges += 1
+      # See if a number can be in a single cell for 1 column
+      for rr in range(0,9,3):
+         for cc in range(0,9,3):
+            # Find the list of unknown digits on that cube
+            unknowns=[1,2,3,4,5,6,7,8,9]
+            for row in range(rr,rr+3):
+               for col in range(cc,cc+3):
+                  v=self.cells[row][col].getValues()
+                  if len(v) == 1:
+                     unknowns.remove(v[0])
+            n=0
+            for v in unknowns:
+               for row in range(rr,rr+3):
+                  for col in range(cc,cc+3):
+                     if v in self.cells[row][col].getValues():
+                        n += 1
+                        r = row
+                        c = col
+               if n == 1:
+                  # The value can be onlyin row r column c of that cube
+                  self.setValue(r,c,v)
+                  nbChanges += 1
+      return nbChanges
+#
+#  Cell.printGame
+#
    def printGame(self):
       horizontalLine="+-------------------+-------------------+-------------------+"
       print horizontalLine
@@ -199,4 +267,11 @@ for i in range(9):
          x.setValue(i,j,v)
 
 x.printGame()
+
+rc=1
+while rc>0:
+  print "Finding values that can be only in 1 location"
+  rc = x.findLoners()
+  print "Found",rc,"values"
+  if rc>0: x.printGame()
 
