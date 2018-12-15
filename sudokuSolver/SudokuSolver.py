@@ -53,14 +53,14 @@ class Game:
       self.cells=[[Cell(j,i) for i in range(9)] for j in range(9)]
    def setValue(self,row,col,value):
       self.cells[row][col].setValue(value)
-      self.delValuesFromCube(row,col,[value])
+      self.delValuesFromBox(row,col,[value])
       self.delValuesFromRow (row,col,[value])
       self.delValuesFromCol (row,col,[value])
-   def delValuesFromCube(self,row,col,values):
-      logging.info('Game: delValuesFromCube('+repr(row)+','+repr(col)+')')
-      # Delete a value from all cells of that cube
+   def delValuesFromBox(self,row,col,values):
+      logging.info('Game: delValuesFromBox('+repr(row)+','+repr(col)+')')
+      # Delete a value from all cells of that box
       # except for the cell at [row,col]
-      # Cell at (row,col): what is the cell in the top left corner of that cube?
+      # Cell at (row,col): what is the cell in the top left corner of that box?
       cr = (row/3) * 3
       cc = (col/3) * 3
       return self.delValues(row,col,cr,cr+3,cc,cc+3,values)
@@ -82,13 +82,13 @@ class Game:
                except SolutionNotValid as problem:
                   raise SolutionNotValid(str(problem)+" in block ["+repr(row)+"]["+repr(col)+"]")
                # If deleting that value results in a single possibility for that cell, we just found a value
-               # We need to eliminate that value from all other cells in this cube, row, and column
+               # We need to eliminate that value from all other cells in this box, row, and column
                if foundValue:
                   v=self.cells[i][j].getValues()
                   self.setValue(i,j,v[0])
 #
 #  Cell.findLoners
-#     This function finds if a value appears only once in the list of possibilities for a row, col, or cube
+#     This function finds if a value appears only once in the list of possibilities for a row, col, or box
 #
    def findLoners(self):
       nbChanges=0
@@ -100,16 +100,32 @@ class Game:
             v=self.cells[row][col].getValues()
             if len(v) == 1:
                unknowns.remove(v[0])
-         n=0
+         logging.debug('Game.findLoners: On row '+repr(row)+': list of possibilities is: '+repr(unknowns))
          for v in unknowns:
+            n=0
+            c=[]
             for col in range(9):
                if v in self.cells[row][col].getValues():
                   n += 1
-                  c = col
+                  c.append(col)
             if n == 1:
                # The value can be onlyin column c of that row
-               self.setValue(row,c,v)
+               self.setValue(row,c[0],v)
                nbChanges += 1
+            elif n<=3:
+               allInSameBox=True
+               c1=(c[0]/3)*3
+               for i in range(1,len(c)):
+                  if (c[i]/3)*3 != c1 : allInSameBox = False
+               if allInSameBox:
+                  logging.info('Game.findLoners: removing '+repr(v)+' from possibilities for other rows in box of cell ('+repr(row)+','+repr(c[0])+')')
+                  # All possibilities of "v" are in the same box. We can remove "v" from all other cels of that box
+                  r1=(row/3)*3
+                  # r1,c1 is the coordinate of the top left cell of that box
+                  for rr in range(r1,r1+3):
+                     if rr == row: continue
+                     self.delValues(row,c[0],rr,rr+1,c1,c1+3,[v])
+                        
       # See if a number can be in a single cell for 1 column
       for col in range(9):
          # Find the list of unknown digits on that column
@@ -118,20 +134,34 @@ class Game:
             v=self.cells[row][col].getValues()
             if len(v) == 1:
                unknowns.remove(v[0])
-         n=0
          for v in unknowns:
+            n=0
+            r=[]
             for row in range(9):
                if v in self.cells[row][col].getValues():
                   n += 1
-                  r = row
+                  r.append(row)
             if n == 1:
                # The value can be only in row r of that column
-               self.setValue(r,col,v)
+               self.setValue(r[0],col,v)
                nbChanges += 1
+            elif n<=3:
+               allInSameBox=True
+               r1=(r[0]/3)*3
+               for i in range(1,len(r)):
+                  if (r[i]/3)*3 != r1 : allInSameBox = False
+               if allInSameBox:
+                  logging.info('Game.findLoners: removing '+repr(v)+' from possibilities for other cols in box of cell ('+repr(r[0])+','+repr(col)+')')
+                  # All possibilities of "v" are in the same box. We can remove "v" from all other cels of that box
+                  c1=(col/3)*3
+                  # r1,c1 is the coordinate of the top left cell of that box
+                  for cc in range(c1,c1+3):
+                     if cc == col: continue
+                     self.delValues(r[0],col,r1,r1+3,cc,c1+1,[v])
       # See if a number can be in a single cell for 1 column
       for rr in range(0,9,3):
          for cc in range(0,9,3):
-            # Find the list of unknown digits on that cube
+            # Find the list of unknown digits on that box
             unknowns=[1,2,3,4,5,6,7,8,9]
             for row in range(rr,rr+3):
                for col in range(cc,cc+3):
@@ -147,7 +177,7 @@ class Game:
                         r = row
                         c = col
                if n == 1:
-                  # The value can be onlyin row r column c of that cube
+                  # The value can be onlyin row r column c of that box
                   self.setValue(r,c,v)
                   nbChanges += 1
       return nbChanges
