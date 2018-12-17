@@ -5,6 +5,7 @@ from collections import Counter
 import logging
 import sys
 import os
+import copy
 
 # The following import requires: sudo pip install ansicolors
 from colors import red,green,blue
@@ -19,7 +20,7 @@ class Cell:
       self.col   = col
       self.values= [1,2,3,4,5,6,7,8,9]
    def setValue(self,v):
-      logging.debug('Cell: setting ('+repr(self.row)+','+repr(self.col)+') to '+repr(v))
+      print 'Setting cell ['+repr(self.row)+','+repr(self.col)+'] to '+repr(v)
       self.values= [v]
    def getValues(self):
       return self.values
@@ -31,11 +32,12 @@ class Cell:
    # True if only 1 possibility remains
    # n    the list of possibilities that were actually removed (will be used for 'undos')
    def delValues(self,valuesToRemove):
-      logging.debug('Cell:delValues values='+repr(valuesToRemove)+' from cell ('+repr(self.row)+','+repr(self.col)+')')
+      print 'Removing possibilities '+repr(valuesToRemove)+' from cell ['+repr(self.row)+','+repr(self.col)+']'
       for v in valuesToRemove:
          if v in self.values:
-            logging.debug('Cell:delValues Removing value='+repr(v)+'from cell ('+repr(self.row)+','+repr(self.col)+')')
+            print 'Removing value '+repr(v)+' from cell ('+repr(self.row)+','+repr(self.col)+') which had possibilities '+repr(self.values)
             self.values.remove(v)
+            print "After removal, cell has possibilities:",self.values
             if len(self.values) == 0:
                raise SolutionNotValid("Solution not valid when deleting "+repr(v)+" at ["+repr(self.row)+"]["+repr(self.col)+"]")
             return (len(self.values) == 1)
@@ -110,7 +112,10 @@ class Game:
    def delValuesFromListOfCells(self,cells,values):
       logging.info('Game: delValuesFromListOfCells. Cells are '+repr(cells)+', values are '+repr(values)+')')
       for r,c in cells:
-         self.cells[r][c].delValues(values)
+         done = self.cells[r][c].delValues(values)
+         if done:
+            v = self.cells[r][c].getValue()
+            self.cells[r][c].setValue(vi[0])
    ###############################
    #  delValues
    #
@@ -123,10 +128,10 @@ class Game:
       for i in range(i0,i1):
          for j in range(j0,j1):
             if not (i == row and j == col):
-               try:
-                  foundValue = self.cells[i][j].delValues(values)
-               except SolutionNotValid as problem:
-                  raise SolutionNotValid(str(problem)+" in block ["+repr(row)+"]["+repr(col)+"]")
+               #try:
+               foundValue = self.cells[i][j].delValues(values)
+               #except SolutionNotValid as problem:
+               #   raise SolutionNotValid(str(problem)+" in block ["+repr(row)+"]["+repr(col)+"]")
                # If deleting that value results in a single possibility for that cell, we just found a value
                # We need to eliminate that value from all other cells in this box, row, and column
                if foundValue:
@@ -413,7 +418,51 @@ testGame.append([
 [3,4,0,0,0,0,0,0,0],
 [0,9,0,5,0,2,6,0,0]])
 
-os.remove('sudoku.log')
+def bruteForce(x):
+   # Use brute force to finish it all
+   # p is the list of possibilities for all unresolved cells
+   # w is the list of coordinates for each of these cells
+   p,w = x.getPossibilities(0,9,0,9)
+   while len(p) > 0:
+      y = copy.deepcopy(x)
+      # Find a cell with the minimum number of possibilities
+      nb_poss= 9
+      index  = 0
+      i      = 0
+      for poss in p:
+         if len(poss) < nb_poss:
+            index   = i
+            nb_poss = len(poss)
+         i += 1
+      # Trying values from cell 'index'
+      for possibility in p[index]:
+         r,c = w[index]
+         print 'Brute force: trying value '+repr(possibility)+' in cell ('+repr(r)+','+repr(c)+')'
+         try:
+            y.setValue(r,c,possibility)
+            rc=1
+            while rc>0:
+               print "Finding values that can be only in 1 location"
+               rc = y.findLoners()
+               print "Found",rc,"values"
+               if rc>0: y.printGame()
+            print "Eliminate pairs"
+            y.eliminatePairs()
+            y.eliminatePairs()
+            print "After trying value",possibility,"in cell [",r,",",c,"]:"
+            y.printGame()
+            return bruteForce(y)
+         except SolutionNotValid:
+            print "After trying value",possibility,"in cell [",r,",",c,"], found invalid solution"
+            y = copy.deepcopy(x)
+      p,w = y.getPossibilities(0,9,0,9)
+   return x
+
+try:
+  os.remove('sudoku.log')
+except Exception:
+  pass
+
 logging.basicConfig(filename='sudoku.log',level=logging.DEBUG)
 
 n=len(testGame)-1
@@ -462,5 +511,6 @@ x.eliminatePairs()
 x.eliminatePairs()
 x.printGame() 
  
- 
- 
+y=bruteForce(x)
+y.printGame()
+
