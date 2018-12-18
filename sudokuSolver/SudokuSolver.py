@@ -20,7 +20,7 @@ class Cell:
       self.col   = col
       self.values= [1,2,3,4,5,6,7,8,9]
    def setValue(self,v):
-      print 'Setting cell ['+repr(self.row)+','+repr(self.col)+'] to '+repr(v)
+      logging.debug('Cell.setValue: Setting cell ['+repr(self.row)+','+repr(self.col)+'] to '+repr(v))
       self.values= [v]
    def getValues(self):
       return self.values
@@ -32,12 +32,12 @@ class Cell:
    # True if only 1 possibility remains
    # n    the list of possibilities that were actually removed (will be used for 'undos')
    def delValues(self,valuesToRemove):
-      print 'Removing possibilities '+repr(valuesToRemove)+' from cell ['+repr(self.row)+','+repr(self.col)+']'
+      logging.debug('Cell.delValues-1: removing possibilities '+repr(valuesToRemove)+' from cell ['+repr(self.row)+','+repr(self.col)+']')
       for v in valuesToRemove:
          if v in self.values:
-            print 'Removing value '+repr(v)+' from cell ('+repr(self.row)+','+repr(self.col)+') which had possibilities '+repr(self.values)
+            logging.debug('Cell.delValues-2: removing value '+repr(v)+' from cell ('+repr(self.row)+','+repr(self.col)+') which had possibilities '+repr(self.values))
             self.values.remove(v)
-            print "After removal, cell has possibilities:",self.values
+            logging.debug("Cell.delValues-3: After removal, cell has possibilities:"+repr(self.values))
             if len(self.values) == 0:
                raise SolutionNotValid("Solution not valid when deleting "+repr(v)+" at ["+repr(self.row)+"]["+repr(self.col)+"]")
             return (len(self.values) == 1)
@@ -114,8 +114,8 @@ class Game:
       for r,c in cells:
          done = self.cells[r][c].delValues(values)
          if done:
-            v = self.cells[r][c].getValue()
-            self.cells[r][c].setValue(vi[0])
+            v = self.cells[r][c].getValues()
+            self.cells[r][c].setValue(v[0])
    ###############################
    #  delValues
    #
@@ -143,95 +143,31 @@ class Game:
    #
    def findLoners(self):
       nbChanges=0
-      # See if a number can be in a single cell for 1 row
-      for row in range(9):
-         # Find the list of unknown digits on that row
-         unknowns=[1,2,3,4,5,6,7,8,9]
-         for col in range(9):
-            v=self.cells[row][col].getValues()
-            if len(v) == 1:
-               unknowns.remove(v[0])
-         logging.debug('Game.findLoners: On row '+repr(row)+': list of possibilities is: '+repr(unknowns))
-         for v in unknowns:
-            n=0
-            c=[]
-            for col in range(9):
-               if v in self.cells[row][col].getValues():
-                  n += 1
-                  c.append(col)
-            if n == 1:
-               # The value can be onlyin column c of that row
-               self.setValue(row,c[0],v)
-               nbChanges += 1
-            elif n<=3:
-               allInSameBox=True
-               c1=(c[0]/3)*3
-               for i in range(1,len(c)):
-                  if (c[i]/3)*3 != c1 : allInSameBox = False
-               if allInSameBox:
-                  logging.info('Game.findLoners: removing '+repr(v)+' from possibilities for other rows in box of cell ('+repr(row)+','+repr(c[0])+')')
-                  # All possibilities of "v" are in the same box. We can remove "v" from all other cels of that box
-                  r1=(row/3)*3
-                  # r1,c1 is the coordinate of the top left cell of that box
-                  for rr in range(r1,r1+3):
-                     if rr == row: continue
-                     self.delValues(row,c[0],rr,rr+1,c1,c1+3,[v])
-                        
-      # See if a number can be in a single cell for 1 column
-      for col in range(9):
-         # Find the list of unknown digits on that column
-         unknowns=[1,2,3,4,5,6,7,8,9]
-         for row in range(9):
-            v=self.cells[row][col].getValues()
-            if len(v) == 1:
-               unknowns.remove(v[0])
-         for v in unknowns:
-            n=0
-            r=[]
-            for row in range(9):
-               if v in self.cells[row][col].getValues():
-                  n += 1
-                  r.append(row)
-            if n == 1:
-               # The value can be only in row r of that column
-               self.setValue(r[0],col,v)
-               nbChanges += 1
-            elif n<=3:
-               allInSameBox=True
-               r1=(r[0]/3)*3
-               for i in range(1,len(r)):
-                  if (r[i]/3)*3 != r1 : allInSameBox = False
-               if allInSameBox:
-                  logging.info('Game.findLoners: removing '+repr(v)+' from possibilities for other cols in box of cell ('+repr(r[0])+','+repr(col)+')')
-                  # All possibilities of "v" are in the same box. We can remove "v" from all other cels of that box
-                  c1=(col/3)*3
-                  # r1,c1 is the coordinate of the top left cell of that box
-                  for cc in range(c1,c1+3):
-                     if cc == col: continue
-                     self.delValues(r[0],col,r1,r1+3,cc,c1+1,[v])
-      # See if a number can be in a single cell for 1 column
-      for rr in range(0,9,3):
-         for cc in range(0,9,3):
-            # Find the list of unknown digits on that box
-            unknowns=[1,2,3,4,5,6,7,8,9]
-            for row in range(rr,rr+3):
-               for col in range(cc,cc+3):
-                  v=self.cells[row][col].getValues()
-                  if len(v) == 1:
-                     unknowns.remove(v[0])
-            n=0
-            for v in unknowns:
-               for row in range(rr,rr+3):
-                  for col in range(cc,cc+3):
-                     if v in self.cells[row][col].getValues():
-                        n += 1
-                        r = row
-                        c = col
-               if n == 1:
-                  # The value can be onlyin row r column c of that box
-                  self.setValue(r,c,v)
-                  nbChanges += 1
+      for thing in 'row','col','box':
+         for item in range(9):
+            # Below, p is the list of possibilities for each cell, and w in the array of where each cell is
+            if thing == 'row': p,w = self.getRowPossibilities(item)
+            if thing == 'col': p,w = self.getColPossibilities(item)
+            if thing == 'box': p,w = self.getBoxPossibilities(item)
+            # Create a list of all possibilities without duplicates
+            s=set()
+            for a in p:
+               for b in a:
+                  s.add(b)
+            # Now for each of the items in s, if it appears only once in p it's a loner
+            for v in s:
+              n=0
+              for i in range(len(p)):
+                 if v in p[i]:
+                    n+=1
+                    index=i
+                 if n == 1:
+                    # We have found a loner, remove it from all other possibilities in that thing
+                    logging.debug('Game.findLoners: On '+thing+' '+repr(item)+',found value '+repr(v)+' is only possible in cell ['+repr(w[i][0])+','+repr(w[i][1])+']')
+                    self.setValue(w[i][0],w[i][1],v)
+                    nbChanges += 1
       return nbChanges
+
    ###############################
    #  getPossibilities
    #
@@ -334,12 +270,12 @@ testGame.append([
 [4,0,0,0,0,0,0,0,0],
 [0,0,0,0,0,0,0,0,0],
 [0,0,0,0,0,0,0,0,0],
+[0,4,0,0,0,0,0,0,0],
 [0,0,0,0,0,0,0,0,0],
 [0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0]])
+[0,0,4,0,0,0,0,0,0],
+[0,0,0,0,0,4,0,0,0],
+[0,0,0,0,0,0,0,0,4]])
 
 # testgame[1]: EASY
 level.append('EASY')
@@ -423,40 +359,54 @@ def bruteForce(x):
    # p is the list of possibilities for all unresolved cells
    # w is the list of coordinates for each of these cells
    p,w = x.getPossibilities(0,9,0,9)
+   # We will play on a copy of the game called 'y'
+   # We keep 'x' to revert to it if our guess ends up being wrong
+   y = copy.deepcopy(x)
    while len(p) > 0:
-      y = copy.deepcopy(x)
       # Find a cell with the minimum number of possibilities
       nb_poss= 9
       index  = 0
       i      = 0
       for poss in p:
-         if len(poss) < nb_poss:
+         if len(poss) < nb_poss or len(poss) == 2:
             index   = i
             nb_poss = len(poss)
          i += 1
       # Trying values from cell 'index'
       for possibility in p[index]:
          r,c = w[index]
-         print 'Brute force: trying value '+repr(possibility)+' in cell ('+repr(r)+','+repr(c)+')'
+         logging.debug('*****bruteForce: trying value '+repr(possibility)+' in cell ('+repr(r)+','+repr(c)+')')
          try:
             y.setValue(r,c,possibility)
             rc=1
             while rc>0:
-               print "Finding values that can be only in 1 location"
+               logging.debug("bruteForce: Finding values that can be only in 1 location")
                rc = y.findLoners()
-               print "Found",rc,"values"
+               logging.debug("bruteForce: found "+repr(rc)+" values")
                if rc>0: y.printGame()
-            print "Eliminate pairs"
+            logging.debug("bruteForce: Eliminate pairs")
             y.eliminatePairs()
             y.eliminatePairs()
-            print "After trying value",possibility,"in cell [",r,",",c,"]:"
+            logging.debug("bruteForce: After trying value "+repr(possibility)+" in cell ["+repr(r)+","+repr(c)+"]:")
             y.printGame()
-            return bruteForce(y)
+            # Calling bruteForce will result in an exception if the solution is invalid or if 
+            # or after all possibilities from this try have been exhausted
+            # So, if we return here, we have found a solution and that solution is 'y'
+            result,z = bruteForce(y)
+            if result == True:
+               # We have found a solution, return it to our caller
+               return True,z
          except SolutionNotValid:
-            print "After trying value",possibility,"in cell [",r,",",c,"], found invalid solution"
-            y = copy.deepcopy(x)
-      p,w = y.getPossibilities(0,9,0,9)
-   return x
+            logging.debug("bruteForce: After trying value "+repr(possibility)+" in cell ["+repr(r)+","+repr(c)+"], found invalid solution")
+         # If we arrive here, our previous guess was wrong.
+         # We now need to reset 'y' and try another one
+         y = copy.deepcopy(x)
+      # If we are here, then none of the possibilities from p[index] was good.
+      # Return saying that we failed so another value can be tried
+      return Fail,y
+   # Now if we are here, it means that all value have been found.
+   # Success, return True with the game 'x'
+   return True,x
 
 try:
   os.remove('sudoku.log')
@@ -499,7 +449,7 @@ for i in range(9):
          x.setValue(i,j,v)
 
 x.printGame()
-#raw_input("Press ENTER")
+raw_input("Press ENTER")
 rc=1
 while rc>0:
    print "Finding values that can be only in 1 location"
@@ -511,6 +461,10 @@ x.eliminatePairs()
 x.eliminatePairs()
 x.printGame() 
  
-y=bruteForce(x)
+result,y=bruteForce(x)
+if result == True:
+   print "We have found a solution!"
+else:
+   print "No solution canbe found"
 y.printGame()
 
