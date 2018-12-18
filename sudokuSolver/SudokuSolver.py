@@ -161,11 +161,11 @@ class Game:
                  if v in p[i]:
                     n+=1
                     index=i
-                 if n == 1:
-                    # We have found a loner, remove it from all other possibilities in that thing
-                    logging.debug('Game.findLoners: On '+thing+' '+repr(item)+',found value '+repr(v)+' is only possible in cell ['+repr(w[i][0])+','+repr(w[i][1])+']')
-                    self.setValue(w[i][0],w[i][1],v)
-                    nbChanges += 1
+              if n == 1:
+                 # We have found a loner, remove it from all other possibilities in that thing
+                 logging.debug('Game.findLoners: On '+thing+' '+repr(item)+',found value '+repr(v)+' is only possible in cell ['+repr(w[index][0])+','+repr(w[index][1])+']')
+                 self.setValue(w[index][0],w[index][1],v)
+                 nbChanges += 1
       return nbChanges
 
    ###############################
@@ -267,15 +267,15 @@ level=[]
 # testgame[0]: DEMO
 level.append('TEST')
 testGame.append([
-[4,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0],
-[0,4,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0],
-[0,0,4,0,0,0,0,0,0],
-[0,0,0,0,0,4,0,0,0],
-[0,0,0,0,0,0,0,0,4]])
+[1,0,0,0,0,0,0,0,8],
+[0,2,0,0,0,0,0,9,0],
+[0,0,3,0,0,0,6,0,0],
+[0,0,0,4,0,7,0,0,0],
+[0,0,0,0,5,0,0,0,0],
+[0,0,0,3,0,6,0,0,0],
+[0,0,4,0,0,0,7,0,0],
+[0,1,0,0,0,0,0,8,0],
+[2,0,0,0,0,0,0,0,9]])
 
 # testgame[1]: EASY
 level.append('EASY')
@@ -403,7 +403,7 @@ def bruteForce(x):
          y = copy.deepcopy(x)
       # If we are here, then none of the possibilities from p[index] was good.
       # Return saying that we failed so another value can be tried
-      return Fail,y
+      return False,y
    # Now if we are here, it means that all value have been found.
    # Success, return True with the game 'x'
    return True,x
@@ -449,7 +449,9 @@ for i in range(9):
          x.setValue(i,j,v)
 
 x.printGame()
+
 raw_input("Press ENTER")
+
 rc=1
 while rc>0:
    print "Finding values that can be only in 1 location"
@@ -457,14 +459,19 @@ while rc>0:
    print "Found",rc,"values"
    if rc>0: x.printGame()
 print "Eliminate pairs"
-x.eliminatePairs()
+raw_input("Press ENTER")
 x.eliminatePairs()
 x.printGame() 
+x.eliminatePairs()
+x.printGame() 
+
+print "Brute force"
+raw_input("Press ENTER")
  
 result,y=bruteForce(x)
 if result == True:
-   print "We have found a solution!"
+   print "We have a solution!"
 else:
-   print "No solution canbe found"
+   print "No solution can be found"
 y.printGame()
 
