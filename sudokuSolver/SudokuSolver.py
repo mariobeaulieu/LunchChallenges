@@ -354,6 +354,19 @@ testGame.append([
 [3,4,0,0,0,0,0,0,0],
 [0,9,0,5,0,2,6,0,0]])
 
+# testgame[0]: DEMO
+level.append('EXPERT-3')
+testGame.append([
+[5,0,0,9,0,4,0,7,0],
+[0,0,0,0,0,7,0,0,0],
+[0,2,0,0,1,0,0,0,0],
+[9,0,0,0,0,0,0,0,0],
+[0,0,0,0,6,1,0,2,0],
+[0,8,5,4,0,0,0,0,0],
+[4,0,0,8,0,2,0,5,0],
+[0,0,0,7,0,0,3,9,6],
+[0,0,0,0,0,0,0,0,0]])
+
 def bruteForce(x):
    # Use brute force to finish it all
    # p is the list of possibilities for all unresolved cells
