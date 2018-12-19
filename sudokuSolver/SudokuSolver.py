@@ -6,7 +6,7 @@ import logging
 import sys
 import os
 import copy
-
+import re
 # The following import requires: sudo pip install ansicolors
 from colors import red,green,blue
 
@@ -167,7 +167,34 @@ class Game:
                  self.setValue(w[index][0],w[index][1],v)
                  nbChanges += 1
       return nbChanges
-
+   ###############################
+   #  findPairs
+   #
+   # Find if pairs of possibilities are present.
+   # Return the list of pairs found
+   #   p is the list of possibilities (array of arrays)
+   #   w is the list of coordinates [row,col] for the possibilities tuples
+   def findPairs(self):
+      for thing in 'row','col','box':
+         for item in range(9):
+            # Below, p is the list of possibilities for each cell, and w in the array of where each cell is
+            if thing == 'row': p,w = self.getRowPossibilities(item)
+            if thing == 'col': p,w = self.getColPossibilities(item)
+            if thing == 'box': p,w = self.getBoxPossibilities(item)
+            for i in range(len(p)-1):
+               if len(p[i]) != 2: continue
+               for j in range(i+1,len(p)):
+                  if p[j] == p[i]:
+                     # i and j are the indices of cells that contain the pair
+                     # w contains the list of all cells with more than 1 possibility.
+                     # We will use that list and remove items i and j to create the list of cells to remove the values
+                     cellsToClear=w[:]
+                     # Remove j first because i<j and if we remove i then we would have to pop j-1
+                     cellsToClear.pop(j)
+                     cellsToClear.pop(i)
+                     self.delValuesFromListOfCells(cellsToClear,p[i])
+                     break
+      return
    ###############################
    #  getPossibilities
    #
@@ -207,42 +234,6 @@ class Game:
    def getColPossibilities(self,c0):
       p,w  = self.getPossibilities(0,9,c0,c0+1)
       return p,w
-   ###############################
-   #  findPairs
-   #
-   # Find if pairs of possibilities are present.
-   # Return the list of pairs found
-   #   p is the list of possibilities (array of arrays)
-   #   w is the list of coordinates [row,col] for the possibilities tuples
-   def findPairs(self,p,w):
-      for i in range(len(p)-1):
-         if len(p[i]) != 2: continue
-         for j in range(i+1,len(p)):
-            if p[j] == p[i]:
-               # i and j are the indices of cells that contain the pair
-               # w contains the list of all cells with more than 1 possibility.
-               # We will use that list and remove items i and j to create the list of cells to remove the values
-               cellsToClear=w[:]
-               # Remove j first because i<j and if we remove i then we would have to pop j-1
-               cellsToClear.pop(j)
-               cellsToClear.pop(i)
-               self.delValuesFromListOfCells(cellsToClear,p[i])
-               break
-      return
-
-   ###############################
-   #  EliminatePairs
-   #
-   # If 2 cells contains the same pair of ossible values, eliminate those values from other cells
-   def eliminatePairs(self):
-      # Rows, columns, and boxes combined in one loop
-      for x in range(0,9):
-         p,w = self.getBoxPossibilities(x)
-         self.findPairs(p,w)
-         p,w = self.getRowPossibilities(x)
-         self.findPairs(p,w)
-         p,w = self.getColPossibilities(x)
-         self.findPairs(p,w)
    ###############################
    #  Cell.printGame
    #
@@ -354,7 +345,7 @@ testGame.append([
 [3,4,0,0,0,0,0,0,0],
 [0,9,0,5,0,2,6,0,0]])
 
-# testgame[0]: DEMO
+# testgame[0]: EXPERT
 level.append('EXPERT-3')
 testGame.append([
 [5,0,0,9,0,4,0,7,0],
@@ -367,7 +358,21 @@ testGame.append([
 [0,0,0,7,0,0,3,9,6],
 [0,0,0,0,0,0,0,0,0]])
 
+# testgame[0]: EXPERT
+level.append('EXPERT-4')
+testGame.append([
+[0,2,0,0,0,0,8,0,1],
+[0,0,0,0,0,6,0,0,0],
+[4,7,0,9,0,0,2,0,0],
+[0,0,5,0,4,0,0,3,0],
+[7,0,0,6,1,0,0,0,0],
+[0,1,0,0,0,8,0,0,4],
+[0,0,0,5,0,0,0,0,3],
+[0,0,2,0,0,0,0,0,0],
+[0,6,0,1,0,0,0,0,7]])
+
 def bruteForce(x):
+   global numberOfSolutions
    # Use brute force to finish it all
    # p is the list of possibilities for all unresolved cells
    # w is the list of coordinates for each of these cells
@@ -396,19 +401,16 @@ def bruteForce(x):
                logging.debug("bruteForce: Finding values that can be only in 1 location")
                rc = y.findLoners()
                logging.debug("bruteForce: found "+repr(rc)+" values")
-               if rc>0: y.printGame()
             logging.debug("bruteForce: Eliminate pairs")
-            y.eliminatePairs()
-            y.eliminatePairs()
+            y.findPairs()
             logging.debug("bruteForce: After trying value "+repr(possibility)+" in cell ["+repr(r)+","+repr(c)+"]:")
-            y.printGame()
             # Calling bruteForce will result in an exception if the solution is invalid or if 
             # or after all possibilities from this try have been exhausted
             # So, if we return here, we have found a solution and that solution is 'y'
-            result,z = bruteForce(y)
-            if result == True:
-               # We have found a solution, return it to our caller
-               return True,z
+            bruteForce(y)
+            #if result == True:
+            #   # We have found a solution, return it to our caller
+            #   return True,z
          except SolutionNotValid:
             logging.debug("bruteForce: After trying value "+repr(possibility)+" in cell ["+repr(r)+","+repr(c)+"], found invalid solution")
          # If we arrive here, our previous guess was wrong.
@@ -416,10 +418,15 @@ def bruteForce(x):
          y = copy.deepcopy(x)
       # If we are here, then none of the possibilities from p[index] was good.
       # Return saying that we failed so another value can be tried
-      return False,y
+      return
    # Now if we are here, it means that all value have been found.
    # Success, return True with the game 'x'
-   return True,x
+   numberOfSolutions += 1
+   print "A solution has been found !\nSolution %i is:"%(numberOfSolutions)
+   if numberOfSolutions <= 10:
+      x.printGame()
+      raw_input("Press ENTER")
+   return
 
 try:
   os.remove('sudoku.log')
@@ -439,9 +446,36 @@ if len(sys.argv)>1:
       print "Invalid number: there are only",n,"games"
       sys.exit(0)
    n=v
+else:
+   print "Enter Sudoku grid."
+   print "Enter 81 digits without any space."
+   print "  0 means a blank case,"
+   print "  1-9 will put that digit in the case"
+   print "  Enter as many digits as you want on each line,"
+   print "  the process ends when you reach 81 digits"
+   grid=''
+   while len(grid) < 81:
+      g = raw_input("Enter digits: ")
+      if re.search('\D',g) is None:
+         grid += g
+      else:
+         print 'You nust use digits 0-9 only'
+      if len(grid) < 81:
+         print '%i more digits needed'%(81 - len(grid))
+   level.append('Interactive')
+   testGame.append([])
+   n = len(testGame)-1
+   i=0
+   for row in range(9):
+      testGame[n].append([])
+      for col in range(9):
+         testGame[n][row].append(int(grid[i]))
+         i+=1
 
 print "Playing game number ",n,"of level",level[n]
 x=Game()
+
+numberOfSolutions = 0
 
 for i in range(9):
    for j in range(9):
@@ -461,30 +495,13 @@ for i in range(9):
       if v != 0:
          x.setValue(i,j,v)
 
-x.printGame()
-
-raw_input("Press ENTER")
-
 rc=1
 while rc>0:
    print "Finding values that can be only in 1 location"
+   x.findPairs()
    rc = x.findLoners()
    print "Found",rc,"values"
-   if rc>0: x.printGame()
 print "Eliminate pairs"
-raw_input("Press ENTER")
-x.eliminatePairs()
-x.printGame() 
-x.eliminatePairs()
-x.printGame() 
-
-print "Brute force"
-raw_input("Press ENTER")
- 
-result,y=bruteForce(x)
-if result == True:
-   print "We have a solution!"
-else:
-   print "No solution can be found"
-y.printGame()
+x.printGame()
+bruteForce(x)
 
