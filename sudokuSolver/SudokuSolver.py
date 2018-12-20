@@ -115,7 +115,7 @@ class Game:
          done = self.cells[r][c].delValues(values)
          if done:
             v = self.cells[r][c].getValues()
-            self.cells[r][c].setValue(v[0])
+            self.setValue(r,c,v[0])
    ###############################
    #  delValues
    #
@@ -171,10 +171,8 @@ class Game:
    #  findPairs
    #
    # Find if pairs of possibilities are present.
-   # Return the list of pairs found
-   #   p is the list of possibilities (array of arrays)
-   #   w is the list of coordinates [row,col] for the possibilities tuples
    def findPairs(self):
+      nbChanges=0
       for thing in 'row','col','box':
          for item in range(9):
             # Below, p is the list of possibilities for each cell, and w in the array of where each cell is
@@ -185,16 +183,70 @@ class Game:
                if len(p[i]) != 2: continue
                for j in range(i+1,len(p)):
                   if p[j] == p[i]:
-                     # i and j are the indices of cells that contain the pair
-                     # w contains the list of all cells with more than 1 possibility.
-                     # We will use that list and remove items i and j to create the list of cells to remove the values
-                     cellsToClear=w[:]
-                     # Remove j first because i<j and if we remove i then we would have to pop j-1
-                     cellsToClear.pop(j)
-                     cellsToClear.pop(i)
-                     self.delValuesFromListOfCells(cellsToClear,p[i])
-                     break
-      return
+                     #print "findPairs: found pair of values %i and %i in cells [%i,%i] and [%i,%i]"%(p[i][0],p[i][1],w[i][0],w[i][1],w[j][0],w[j][1])
+                     #self.printGame()
+                     # Check if any of the values in p is in the list of cells to clear
+                     needToClear=False
+                     for k in range(len(p)):
+                        if k!=i and k!=j and ( p[i][0] in p[k] or p[i][1] in p[k] ):
+                           needToClear=True
+                           break
+                     if needToClear:
+                        logging.debug("findPairs: found pair of values %i and %i in cells [%i,%i] and [%i,%i]"%(p[i][0],p[i][1],w[i][0],w[i][1],w[j][0],w[j][1]))
+                        # i and j are the indices of cells that contain the pair
+                        # w contains the list of all cells with more than 1 possibility.
+                        # We will use that list and remove items i and j to create the list of cells to remove the values
+                        cellsToClear=w[:]
+                        # Remove j first because i<j and if we remove i then we would have to pop j-1
+                        cellsToClear.pop(j)
+                        cellsToClear.pop(i)
+                        self.delValuesFromListOfCells(cellsToClear,p[i])
+                        nbChanges += 1
+                        break
+      return nbChanges
+   ###############################
+   #  findTriplets
+   #
+   # Find if 3 values are the only possibilities in a set of 3 cells in a row, column, or box
+   def findTriplets(self):
+      nbChanges=0
+      for thing in 'row','col','box':
+         for item in range(9):
+            # Below, p is the list of possibilities for each cell, and w in the array of where each cell is
+            if thing == 'row': p,w = self.getRowPossibilities(item)
+            if thing == 'col': p,w = self.getColPossibilities(item)
+            if thing == 'box': p,w = self.getBoxPossibilities(item)
+            # If there are 3 unknown cells or less in that thing, triplets are useless
+            if len(p)<4: continue
+            for i in range(len(p)-2):
+               # If that cell has more than 3 possibilities, forget it
+               if len(p[i]) > 3: continue
+               for j in range(i+1,len(p)-1):
+                  if len(p[j]) > 3: continue
+                  if len(set(p[i]+p[j])) > 3: continue
+                  for k in range(j+1,len(p)):
+                     s=list(set(p[i]+p[j]+p[k]))
+                     if len(s) == 3:
+                        needToClear=False
+                        # Check first if thare is anything to clear from the other cells
+                        for h in range(len(p)):
+                           if h!=i and h!=j and h!=k and (s[0] in p[h] or s[1] in p[h] or s[2] in p[h]):
+                              needToClear = True
+                              break;
+                        if needToClear:
+                           logging.debug("findTriplets: found triplet %i,%i,%i in cells [%i,%i],[%i,%i],[%i,%i]"%(s[0],s[1],s[2],w[i][0],w[i][1],w[j][0],w[j][1],w[k][0],w[k][1]))
+                           print "findTriplets: found triplet %i,%i,%i in cells [%i,%i],[%i,%i],[%i,%i]"%(s[0],s[1],s[2],w[i][0],w[i][1],w[j][0],w[j][1],w[k][0],w[k][1])
+                           self.printGame()
+                           # We have found a triplet.
+                           # Remove those 3 values from all other cells in that thing
+                           cellsToClear=w[:]
+                           cellsToClear.pop(k)
+                           cellsToClear.pop(j)
+                           cellsToClear.pop(i)
+                           self.delValuesFromListOfCells(cellsToClear,s)
+                           nbChanges += 1
+                           break
+      return nbChanges
    ###############################
    #  getPossibilities
    #
@@ -371,7 +423,7 @@ testGame.append([
 [0,0,2,0,0,0,0,0,0],
 [0,6,0,1,0,0,0,0,7]])
 
-def bruteForce(x):
+def bruteForce(x, debug):
    global numberOfSolutions
    # Use brute force to finish it all
    # p is the list of possibilities for all unresolved cells
@@ -394,24 +446,33 @@ def bruteForce(x):
       for possibility in p[index]:
          r,c = w[index]
          logging.debug('*****bruteForce: trying value '+repr(possibility)+' in cell ('+repr(r)+','+repr(c)+')')
+         if debug:
+            print "Brute force: trying value %i in cell [%i,%i]"%(possibility,r,c)
          try:
             y.setValue(r,c,possibility)
             rc=1
             while rc>0:
+               logging.debug("bruteForce: Find pairs")
+               rc1 = y.findPairs()
+               logging.debug("bruteForce: Find Triplets")
+               rc2 = y.findTriplets()
                logging.debug("bruteForce: Finding values that can be only in 1 location")
-               rc = y.findLoners()
-               logging.debug("bruteForce: found "+repr(rc)+" values")
-            logging.debug("bruteForce: Eliminate pairs")
-            y.findPairs()
+               rc3 = y.findLoners()
+               logging.debug("bruteForce: found %i pairs, %i triplets, and %i loners"%(rc1,rc2,rc3))
+               rc=rc1+rc2+rc3
+            if debug:
+               y.printGame()
             logging.debug("bruteForce: After trying value "+repr(possibility)+" in cell ["+repr(r)+","+repr(c)+"]:")
             # Calling bruteForce will result in an exception if the solution is invalid or if 
             # or after all possibilities from this try have been exhausted
             # So, if we return here, we have found a solution and that solution is 'y'
-            bruteForce(y)
+            bruteForce(y, debug)
             #if result == True:
             #   # We have found a solution, return it to our caller
             #   return True,z
          except SolutionNotValid:
+            if debug:
+               print "Brute force: Value %i at [%i,%i] didn't work out"%(possibility,r,c)
             logging.debug("bruteForce: After trying value "+repr(possibility)+" in cell ["+repr(r)+","+repr(c)+"], found invalid solution")
          # If we arrive here, our previous guess was wrong.
          # We now need to reset 'y' and try another one
@@ -434,6 +495,8 @@ except Exception:
   pass
 
 logging.basicConfig(filename='sudoku.log',level=logging.DEBUG)
+
+debug=True
 
 n=len(testGame)-1
 if len(sys.argv)>1:
@@ -497,11 +560,17 @@ for i in range(9):
 
 rc=1
 while rc>0:
-   print "Finding values that can be only in 1 location"
-   x.findPairs()
-   rc = x.findLoners()
-   print "Found",rc,"values"
-print "Eliminate pairs"
+   logging.debug("Initial elimination: Find pairs")
+   rc1 = x.findPairs()
+   logging.debug("Initial elimination: Find Triplets")
+   rc2 = x.findTriplets()
+   logging.debug("Initial elimination: Finding values that can be only in 1 location")
+   rc3 = x.findLoners()
+   logging.debug("Initial elimination: found %i pairs, %i triplets, and %i loners"%(rc1,rc2,rc3))
+   if debug: print "Initial elimination: found %i pairs, %i triplets, and %i loners"%(rc1,rc2,rc3)
+   rc=rc1+rc2+rc3
+
+print "This is the grid before brute force attempt:"
 x.printGame()
-bruteForce(x)
+bruteForce(x,debug)
 
