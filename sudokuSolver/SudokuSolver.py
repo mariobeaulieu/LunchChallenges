@@ -572,5 +572,8 @@ while rc>0:
 
 print "This is the grid before brute force attempt:"
 x.printGame()
-bruteForce(x,debug)
+p,w = x.getPossibilities(0,9,0,9)
+if len(p) > 0:
+   raw_input("Press ENTER")
+   bruteForce(x,debug)
 
