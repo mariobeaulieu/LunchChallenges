@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import random
 import math
+import sys
 
 # Coordinates of cities to visit
 cities    = [ 'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H' ]
@@ -15,6 +16,15 @@ for i in range(nb):
        distances[cities[i]+cities[j]] = math.sqrt( (coords[i][0]-coords[j][0])**2 + (coords[i][1]-coords[j][1])**2 )
 
 numIterations = 10
+if sys.argv > 1:
+  try:
+     numIterations = int(sys.argv[1])
+     if numIterations<1:
+        numIterations = 10
+  except:
+     pass
+
+print 'We will consider',numIterations,'iterations'
 
 for iteration in range(numIterations):
   dist=0
@@ -32,14 +42,12 @@ for iteration in range(numIterations):
       j=(j+1)%nb
     used[j]=True
     currPath.append(cities[j])
-    route = [cities[city],cities[j]]
-    route.sort()
+    route = sorted([cities[city],cities[j]])
     dist += distances[route[0]+route[1]]
     city=j
   # Then we link back to start city
   currPath.append(cities[0])
-  route = [cities[city],cities[0]]
-  route.sort()
+  route = sorted([cities[city],cities[0]])
   dist += distances[route[0]+route[1]]
   if dist < minDist:
     minPath = currPath
