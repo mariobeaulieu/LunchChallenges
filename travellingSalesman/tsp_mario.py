@@ -2,14 +2,13 @@
 import random
 import math
 import sys
-from sys import stdin
 
 RNDMAX=10000 # Max range for city coordinate
 nb=0
 coords=[]
 print 'If program is stuck here, press ^D'
 try:
-  for line in stdin:
+  for line in sys.stdin:
     if line.strip() != '':
       coordTxt = line.split(' ')
       coords.append([int(coordTxt[0]),int(coordTxt[1])])
@@ -50,9 +49,13 @@ print 'We will consider',numIterations,'iterations'
 
 minDist   = RNDMAX*nb
 minPath   = []
-
+pc        = -1
 for iteration in range(numIterations):
-  print "\r%i%% done"%int(100*iteration/numIterations),
+  tmp=int(100.*iteration/numIterations+0.5)
+  if tmp != pc:
+    pc = tmp
+    print "\r%i%% done"%pc,
+    sys.stdout.flush()
   dist=0
   currPath=[]
   #Cities already visited
@@ -85,5 +88,6 @@ for iteration in range(numIterations):
   if dist < minDist:
     minPath = currPath
     minDist=dist
+print
 print 'Best path found is ',minPath
 print 'Distance is ',minDist
