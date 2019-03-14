@@ -2,20 +2,37 @@
 import random
 import math
 import sys
+from sys import stdin
+
+nb=0
+coords=[]
+try:
+  for line in stdin:
+    if line.strip() != '':
+      coordTxt = line.split(' ')
+      coords.append([int(coordTxt[0]),int(coordTxt[1])])
+      nb+=1
+except Exception as e:
+  print 'Error when reading data stream: e'
+
+if nb==0:
+  print 'Usage: %s < infile '%(sys.argv[0])
+  sys.exit(1)
+
+cities    = [str(i) for i in range(nb)]
 
 # Coordinates of cities to visit
-cities    = [ 'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H' ]
-coords    = [[1,1],[4,2],[5,2],[6,4],[4,4],[3,6],[1,5],[2,3]]
+#cities    = [ 'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H' ]
+#coords    = [[1,1],[4,2],[5,2],[6,4],[4,4],[3,6],[1,5],[2,3]]
 minDist   = 1000
 minPath   = []
-nb        = len(cities)
 
 distances = {}
 for i in range(nb):
     for j in range(i+1,nb):
        distances[cities[i]+cities[j]] = math.sqrt( (coords[i][0]-coords[j][0])**2 + (coords[i][1]-coords[j][1])**2 )
 
-numIterations = 10
+numIterations = 100
 if sys.argv > 1:
   try:
      numIterations = int(sys.argv[1])

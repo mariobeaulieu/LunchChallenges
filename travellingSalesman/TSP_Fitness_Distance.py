@@ -3,11 +3,28 @@ import math
 import sys
 import mlrose
 import numpy as np
+from sys import stdin
+
+nb=0
+coordsi_list=[]
+try:
+  for line in stdin:
+    if line.strip() != '':
+      coordTxt = line.split(' ')
+      coords_list.append([int(coordTxt[0]),int(coordTxt[1])])
+      nb+=1
+except Exception as e:
+  print 'Error when reading data stream: e'
+
+if nb==0:
+  print 'Usage: %s < infile '%(sys.argv[0])
+  sys.exit(1)
+
 
 # Coordinates of cities to visit
-cities      = [ 'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H' ]
-coords_list = [(1,1),(4,2),(5,2),(6,4),(4,4),(3,6),(1,5),(2,3)]
-nb_cities   = len(cities)
+#cities      = [ 'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H' ]
+#coords_list = [(1,1),(4,2),(5,2),(6,4),(4,4),(3,6),(1,5),(2,3)]
+nb_cities   = nb
 use_coords  = True
 
 if use_coords:

@@ -15,3 +15,6 @@ if sys.argv > 1:
      pass
 
 # City coordinates will be chosen randomly
+# Generate s series of numItems numbers that represent cities
+for i in range(numItems):
+   print random.randint(0,10000),random.randint(0,10000)
