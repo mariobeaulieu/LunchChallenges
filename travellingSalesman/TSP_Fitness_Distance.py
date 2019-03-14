@@ -29,10 +29,6 @@ if nb==0:
 
 print '\n',nb,'values are in the set\n'
 
-
-# Coordinates of cities to visit
-#cities      = [ 'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H' ]
-#coords_list = [(1,1),(4,2),(5,2),(6,4),(4,4),(3,6),(1,5),(2,3)]
 nb_cities   = nb
 use_coords = len(sys.argv)>1
 if use_coords:
@@ -49,7 +45,7 @@ else:
   # Initialize fitness function object using dist_list
   fitness_function = mlrose.TravellingSales(distances = dist_list)
 
-problem_fit = mlrose.TSPOpt(length=nb_cities, fitness_fn=fitness_function, maximize=True)
+problem_fit = mlrose.TSPOpt(length=nb_cities, fitness_fn=fitness_function, maximize=False)
 
 # Solve the problem using the genetic algorithm
 best_state, best_fitness = mlrose.genetic_alg(problem_fit, random_state=2)

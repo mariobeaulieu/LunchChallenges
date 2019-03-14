@@ -32,9 +32,6 @@ print '\n',nb,'values are in the set\n'
 cities    = [i for i in range(nb)]
 attempts  = max(int(nb/10),3) # Number of attempts for each section
 
-minDist   = RNDMAX*nb
-minPath   = []
-
 distances = {}
 for i in range(nb):
     for j in range(i+1,nb):
@@ -51,7 +48,11 @@ if sys.argv > 1:
 
 print 'We will consider',numIterations,'iterations'
 
+minDist   = RNDMAX*nb
+minPath   = []
+
 for iteration in range(numIterations):
+  print "\r%i%% done"%int(100*iteration/numIterations),
   dist=0
   currPath=[]
   #Cities already visited
@@ -75,7 +76,7 @@ for iteration in range(numIterations):
         bestj   =j
     used[bestj]=True
     currPath.append(cities[bestj])
-    dist += d
+    dist += bestDist
     city=bestj
   # Then we link back to start city
   currPath.append(cities[0])
