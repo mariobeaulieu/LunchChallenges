@@ -4,17 +4,19 @@ import tkinter as tk
 dbg=False
 maxNum = 0
 count = 0
+step_mode = True
 
 def print_grid(grid_size, grid_of_cells, pause=False, solution=False):
-    global count
+    global count, step_mode, root
+    grid_width = 467
     count += 1
-    if pause or count % 10 == 0:
+    if pause or step_mode:
         root = tk.Tk()
         if solution:
             root.title(f"Solution found after {count} attempts")
         else:
             root.title(f"Fill Numbers Game - {count}")
-        root.geometry("500x500")
+        root.geometry(f"{grid_width}x500")
 
         for i in range(grid_size):
             for j in range(grid_size):
@@ -28,11 +30,25 @@ def print_grid(grid_size, grid_of_cells, pause=False, solution=False):
                     fgcol = "white"
                     bgcol = "black"
                 tk.Button(root, text=tx, fg=fgcol, bg=bgcol).grid(row=i, column=j, padx=0, pady=0)
-        if pause:
-            root.mainloop()
-        else:
-            root.update()
+        fgcol = "black"
+        bgcol = "white"
+        tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).place(x=10, y=467, anchor="w")
+        tk.Button(root, text="Continue to solution", fg=fgcol, bg=bgcol, command=continue_to_solution).place(x=grid_width/2, y=467,anchor="center")
+        tk.Button(root, text="Stop", fg=fgcol, bg=bgcol, command=exit_program).place(x=grid_width-10,y=467,anchor="e")
+        root.mainloop()
 
+def exit_program():
+    exit()
+
+def step_program():
+    global step_mode, root
+    step_mode = True
+    root.quit()
+
+def continue_to_solution():
+    global step_mode
+    step_mode = False
+    root.quit()
 
 class Start_cell:
     def __init__(self, row, col, horizontal):
@@ -391,8 +407,6 @@ def recurse(g, row, col, hor, value):
         print(f"Number {value} is being written at position {row}:{col}")
         print_grid(g.grid_size, g.xy)
 
-    if value == '910850811':
-        print_grid(g.grid_size, g.xy, True)
     g.get_start_positions()
     if len(g.start_pos_order) == 0:
         print("All numbers have been placed!")
