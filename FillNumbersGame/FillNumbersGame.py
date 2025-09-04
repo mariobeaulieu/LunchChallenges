@@ -5,29 +5,32 @@ dbg=False
 maxNum = 0
 count = 0
 
-def print_grid(grid_size, grid_of_cells, pause=False):
+def print_grid(grid_size, grid_of_cells, pause=False, solution=False):
     global count
-    root = tk.Tk()
-    root.title(f"Fill Numbers Game - {count}")
-    root.geometry("500x500")
-
-    for i in range(grid_size):
-        for j in range(grid_size):
-            tx = " "
-            if grid_of_cells[i][j].contains_number:
-                fgcol = "black"
-                bgcol = "white"
-                if grid_of_cells[i][j].value != -1:
-                    tx = grid_of_cells[i][j].value
-            else:
-                fgcol = "white"
-                bgcol = "black"
-            tk.Button(root, text=tx, fg=fgcol, bg=bgcol).grid(row=i, column=j, padx=0, pady=0)
     count += 1
-    if pause:
-        root.mainloop()
-    else:
-        if count %10 == 0:
+    if pause or count % 10 == 0:
+        root = tk.Tk()
+        if solution:
+            root.title(f"Solution found after {count} attempts")
+        else:
+            root.title(f"Fill Numbers Game - {count}")
+        root.geometry("500x500")
+
+        for i in range(grid_size):
+            for j in range(grid_size):
+                tx = " "
+                if grid_of_cells[i][j].contains_number:
+                    fgcol = "black"
+                    bgcol = "white"
+                    if grid_of_cells[i][j].value != -1:
+                        tx = grid_of_cells[i][j].value
+                else:
+                    fgcol = "white"
+                    bgcol = "black"
+                tk.Button(root, text=tx, fg=fgcol, bg=bgcol).grid(row=i, column=j, padx=0, pady=0)
+        if pause:
+            root.mainloop()
+        else:
             root.update()
 
 
@@ -158,19 +161,6 @@ class Game:
                 nouveau_list[i].append(self.num_list[i][j])
         return nouveau_list
 
-    # def copy_start_positions(self):
-    #     nouveau_pos = [[], [], [], [], [], [], [], [], [], [], [], [], []]
-    #     for i in range(len(self.start_positions)):
-    #         for j in range(len(self.start_positions[i])):
-    #             nouveau_pos.append(self.start_positions[i][j].copy())
-    #     return nouveau_pos
-    #
-    # def copy_start_pos_order(self):
-    #     nouveau_pos = []
-    #     for i in range(len(self.start_positions)):
-    #         nouveau_pos.append(self.start_positions[i].copy())
-    #     return nouveau_pos
-
     def read_grid(self, filename: "Numbers.txt") -> bool:
         reading_numbers = True
         num_digits = 0
@@ -259,7 +249,7 @@ class Game:
 
     # Write a number horizontally, return False if conflict
     def check_write_horizontal(self, row, col, value):
-        fit = True
+        fit = False
         ll = len(value)
         if dbg: print(f"Writing {value} to line {row} pos {col}], hor_pos={self.xy[row][col].hor_pos}, len={self.xy[row][col].hor_num_length}")
         if self.xy[row][col].hor_pos != 0: return False
@@ -267,27 +257,33 @@ class Game:
         for n in range(ll):
             cell=self.xy[row][col+n]
             if dbg: print(f"Cell value is {cell.value}, compared to {value[n]}")
-            if cell.value != value[n] and cell.value != -1: return False
-            # We also need to check if any vertical number going through that position with that digit exists
-            vpos = self.xy[row][col+n].ver_pos
-            # lver is the length of the vertical number
-            lver = self.xy[row-vpos][col+n].ver_num_length
-            # gather the list of "known" digits and their position for the vertical number
-            known=[[vpos, value[n]]]
-            for i in range(lver):
-                if self.xy[row-vpos+i][col+n].value != -1:
-                    known.append([i, self.xy[row-vpos+i][col+n].value])
-            # Now scan every number lver-digit long to see if any would fit
-            for i in range(len(self.num_list[lver])):
-                number_to_test = self.num_list[lver][i]
-                digit = number_to_test[vpos]
-                # If "fit" remains True after all tests, then it's a fit!
-                fit = True
-                for j in range(len(known)):
-                    if digit != known[j][1]:
-                        fit = False
-                if fit:
-                    break
+            if cell.value != value[n]:
+                if cell.value != -1:
+                    return False
+                # If we are here, it means the cell value is currently empty and we need to
+                # check if any horizontal number going through that position with that digit exists
+                vpos = self.xy[row][col+n].ver_pos
+                # lver is the length of the vertical number
+                lver = self.xy[row-vpos][col+n].ver_num_length
+                # gather the list of "known" digits and their position for the vertical number
+                known=[[vpos, value[n]]]
+                for i in range(lver):
+                    if self.xy[row-vpos+i][col+n].value != -1:
+                        known.append([i, self.xy[row-vpos+i][col+n].value])
+                # Now scan every number lver-digit long to see if any would fit
+                for i in range(len(self.num_list[lver])):
+                    number_to_test = self.num_list[lver][i]
+                    # If "fit" remains True after all tests, then it's a fit!
+                    fit = True
+                    for j in range(len(known)):
+                        digit = number_to_test[known[j][0]]
+                        if digit != known[j][1]:
+                            fit = False
+                    if fit:
+                        break
+                # If one digit doesn't match, stop testing for other digits
+                if not fit:
+                    return False
         return fit
 
     def write_horizontal(self, i, j, value):
@@ -296,7 +292,7 @@ class Game:
 
     # Write a number vertically, return False if conflict
     def check_write_vertical(self, row, col, value):
-        fit = True
+        fit = False
         ll = len(value)
         if dbg: print(f"Writing {value} to column {col} pos {row}], ver_pos={self.xy[row][col].ver_pos}, len={self.xy[row][col].ver_num_length}")
         if self.xy[row][col].ver_pos != 0: return False
@@ -304,27 +300,34 @@ class Game:
         for n in range(ll):
             cell=self.xy[row+n][col]
             if dbg: print(f"Cell value is {cell.value}, compared to {value[n]}, ll={ll}")
-            if cell.value != value[n] and cell.value != -1: return False
-            # We also need to check if any horizontal number going through that position with that digit exists
-            hpos = self.xy[row+n][col].hor_pos
-            # lhor is the length of the horizontal number
-            lhor = self.xy[row+n][col-hpos].hor_num_length
-            # gather the list of "known" digits and their position for the horizontal number
-            known = [[hpos, value[n]]]
-            for i in range(lhor):
-                if self.xy[row+n][col-hpos+i].value != -1:
-                    known.append([i, self.xy[row+n][col-hpos+i].value])
-            # Now scan every number lhor-digit long to see if any would fit
-            for i in range(len(self.num_list[lhor])):
-                number_to_test = self.num_list[lhor][i]
-                digit = number_to_test[hpos]
-                # If "fit" remains True after all tests, then it's a fit!
-                fit = True
-                for j in range(len(known)):
-                    if digit != known[j][1]:
-                        fit = False
-                if fit:
-                    break
+            if cell.value != value[n]:
+                if cell.value != -1:
+                    return False
+                # If we are here, it means the cell value is currently empty and we need to
+                # check if any horizontal number going through that position with that digit exists
+                hpos = self.xy[row+n][col].hor_pos
+                # lhor is the length of the horizontal number
+                lhor = self.xy[row+n][col-hpos].hor_num_length
+                # gather the list of "known" digits and their position for the horizontal number
+                known = [[hpos, value[n]]]
+                for i in range(lhor):
+                    if self.xy[row+n][col-hpos+i].value != -1:
+                        known.append([i, self.xy[row+n][col-hpos+i].value])
+                # Now scan every number lhor-digit long to see if any would fit
+                for i in range(len(self.num_list[lhor])):
+                    number_to_test = self.num_list[lhor][i]
+                    # If "fit" remains True after all tests, then it's a fit!
+                    fit = True
+                    for j in range(len(known)):
+                        digit = number_to_test[known[j][0]]
+                        if digit != known[j][1]:
+                            fit = False
+                            break
+                    if fit:
+                        break
+                # If one digit doesn't match, stop testing for other digits
+                if not fit:
+                    return False
         return fit
 
     def write_vertical(self, i, j, value):
@@ -393,7 +396,7 @@ def recurse(g, row, col, hor, value):
     g.get_start_positions()
     if len(g.start_pos_order) == 0:
         print("All numbers have been placed!")
-        print_grid(g.grid_size, g.xy)
+        print_grid(g.grid_size, g.xy, True, True)
     else:
         number_of_entries_of_that_size = g.start_pos_order[0][0]
         number_size = g.start_pos_order[0][1]
