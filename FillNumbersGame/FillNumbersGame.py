@@ -1,14 +1,14 @@
 #!/usr/bin/python3
-import sys
 import tkinter as tk
 
 dbg=False
 maxNum = 0
+count = 0
 
-def print_grid(grid_size, grid_of_cells):
-    # global grid_size
+def print_grid(grid_size, grid_of_cells, pause=False):
+    global count
     root = tk.Tk()
-    root.title("Fill Numbers Game")
+    root.title(f"Fill Numbers Game - {count}")
     root.geometry("500x500")
 
     for i in range(grid_size):
@@ -23,15 +23,13 @@ def print_grid(grid_size, grid_of_cells):
                 fgcol = "white"
                 bgcol = "black"
             tk.Button(root, text=tx, fg=fgcol, bg=bgcol).grid(row=i, column=j, padx=0, pady=0)
-    root.mainloop()
+    count += 1
+    if pause:
+        root.mainloop()
+    else:
+        if count %10 == 0:
+            root.update()
 
-def print_numbers():
-    global numbers, maxNum
-    print ("\n======== NUMBERS =========")
-    for i in range(3,maxNum+1):
-        if dbg: print(f"There are {len(numbers[i])} {i}-character numbers)")
-        if len(numbers[i]) != 0:
-            print(f"{i}: {numbers[i]}")
 
 class Start_cell:
     def __init__(self, row, col, horizontal):
@@ -40,6 +38,7 @@ class Start_cell:
         # horizontal is TRUE if the position refers to a horizontal start position. False if it's vertical
         # The same cell can have 2 entries, one for vertical and one for horizontal
         self.horizontal = horizontal
+
 
 class Cell:
     # A cell contains a digit for a horizontal number and for a vertical number.
@@ -366,10 +365,10 @@ class Game:
                     print(f"Start cells for {i} char numbers are:")
                     for j in range(0, nb):
                         if self.start_positions[i][j].horizontal:
-                            dir="horizontal"
+                            direct="horizontal"
                         else:
-                            dir="vertical"
-                        print(f"[{self.start_positions[i][j].row},{self.start_positions[i][j].col}]->{dir}")
+                            direct="vertical"
+                        print(f"[{self.start_positions[i][j].row},{self.start_positions[i][j].col}]->{direct}")
 
 def recurse(g, row, col, hor, value):
     # This function will select a position to write a number from the list
@@ -387,12 +386,13 @@ def recurse(g, row, col, hor, value):
     if row != -1:
         g.write_number(row, col, hor, value)
         print(f"Number {value} is being written at position {row}:{col}")
-        if dbg:
-            print_grid(g.grid_size, g.xy)
+        print_grid(g.grid_size, g.xy)
 
+    if value == '910850811':
+        print_grid(g.grid_size, g.xy, True)
     g.get_start_positions()
     if len(g.start_pos_order) == 0:
-        printf("All numbers have been placed!")
+        print("All numbers have been placed!")
         print_grid(g.grid_size, g.xy)
     else:
         number_of_entries_of_that_size = g.start_pos_order[0][0]
@@ -429,13 +429,5 @@ print_grid(g.grid_size, g.xy)
 # Call recurse with dummy values so I don't have to calculate them here
 recurse(g, -1, -1, -1, -1)
 
-# n=g.num_list[9][1]
-# i=10
-# j=4
-# if g.check_write_horizontal(i,j,n):
-#     g.write_horizontal(i,j,n)
-#     print_grid(g.grid_size, g.xy)
-# else:
-#     print(f"Couldn't write horizontally at position [{i},{j}] the number {n}")
-#
+print("Done")
 
