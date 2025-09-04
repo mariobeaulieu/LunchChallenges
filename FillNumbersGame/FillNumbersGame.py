@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import sys
 import tkinter as tk
 
 dbg=False
@@ -439,9 +440,11 @@ def debug_data():
         for j in range(0,4):
             print(f"[{i},{j}]: HorPos={g.xy[i][j].hor_pos}, VerPos={g.xy[i][j].ver_pos}, Value={g.xy[i][j].value}")
 
-NumWordsPlaced=0
-NumWordsPlacedMax=0
-g=Game("Numbers.txt")
+
+filename="Numbers.txt"
+if len(sys.argv) > 1:
+    filename=sys.argv[1]
+g=Game(filename)
 print_grid(g.grid_size, g.xy)
 # Call recurse with dummy values so I don't have to calculate them here
 recurse(g, -1, -1, -1, -1)
