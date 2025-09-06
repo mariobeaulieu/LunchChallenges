@@ -6,18 +6,21 @@ dbg=False
 maxNum = 0
 count = 0
 step_mode = True
+number_of_solutions = 0
+root = ""
 
 def print_grid(grid_size, grid_of_cells, pause=False, solution=False):
-    global count, step_mode, root
+    global count, step_mode, root, number_of_solutions
     grid_width = 467
     count += 1
     if pause or step_mode:
         root = tk.Tk()
         if solution:
-            root.title(f"Solution found after {count} attempts")
+            number_of_solutions += 1
+            root.title("Solution #"+str(number_of_solutions)+" found after "+str(count)+" attempts")
         else:
-            root.title(f"Fill Numbers Game - {count}")
-        root.geometry(f"{grid_width}x500")
+            root.title("Fill Numbers Game - "+str(count))
+        root.geometry(str(grid_width)+"x500")
 
         for i in range(grid_size):
             for j in range(grid_size):
@@ -122,9 +125,9 @@ class Game:
             for j in range(self.grid_size):
                 self.xy[i].append(Cell())
         # Use the grid to change black cells into number cells and set the horizontal pos in the number
-        if dbg: print(f"Creating the Game grid with size {self.grid_size} x {self.grid_size}")
+        if dbg: print("Creating the Game grid with size "+str(self.grid_size)+" x "+str(self.grid_size))
         self.read_grid(filename)
-        if dbg: print(f"Grid size = {self.grid_size}")
+        if dbg: print("Grid size = "+str(self.grid_size))
         for i in range(self.grid_size):
             h=0
             for j in range(self.grid_size):
@@ -162,7 +165,7 @@ class Game:
         if dbg:
             for i in range(self.grid_size):
                 for j in range(self.grid_size):
-                    print(f"[{i}:{j}]: contains_number={self.xy[i][j].contains_number}, HorNumLen: {self.xy[i][j].hor_num_length}, HorPos: {self.xy[i][j].hor_pos}, VerNumLen: {self.xy[i][j].ver_num_length}, VerPos: {self.xy[i][j].ver_pos}")
+                    print("["+str(i)+":"+str(j)+"]: contains_number="+str(self.xy[i][j].contains_number)+", HorNumLen: "+str(self.xy[i][j].hor_num_length)+", HorPos: "+str(self.xy[i][j].hor_pos)+", VerNumLen: "+str(self.xy[i][j].ver_num_length)+", VerPos: "+str(self.xy[i][j].ver_pos))
 
     def copy_xy(self):
         nouveau_xy = [[], [], [], [], [], [], [], [], [], [], [], [], []]
@@ -189,40 +192,40 @@ class Game:
         while length > 0:
             if reading_numbers:
                 if line != "GRID":
-                    if dbg: print(f"{length}-digit number: <{line}>")
+                    if dbg: print(""+str(length)+"-digit number: <"+str(line)+">")
                     self.num_list[length].append(line)
                     num_digits += length
                     if length > self.grid_size:
-                        print(f"Number too long ({length})\nMaximum length of numbers set to {maxNum}")
+                        print("Number too long ("+str(length)+")\nMaximum length of numbers set to "+str(maxNum))
                         return False
                 else:
                     reading_numbers = False
             else:
-                if dbg: print(f"Grid: <{line}>")
+                if dbg: print("Grid: <"+str(line)+">")
                 for i in range(length):
                     if line[i] == "0":
-                        if dbg: print(f"[{gridline},{i}]: Contains_Number")
+                        if dbg: print("["+str(gridline)+","+str(i)+"]: Contains_Number")
                         self.xy[gridline][i].contains_number = True
                         num_cases += 1
                     else:
-                        if dbg: print(f"[{gridline},{i}]: Not a Number")
+                        if dbg: print("["+str(gridline)+","+str(i)+"]: Not a Number")
                         self.xy[gridline][i].contains_number = False
                 gridline += 1
             line = file.readline().strip()
             length = len(line)
         if num_cases * 2 != num_digits:
             print(
-                f"Error in the file: {num_digits} digits should be an even number and should be equal to 2* number of cases (={num_cases})")
+                f"Error in the file: "+str(num_digits)+" digits should be an even number and should be equal to 2* number of cases (="+str(num_cases)+")")
             return False
         else:
-            print(f"\nFile OK: {num_digits} digits fit correctly in {num_cases} cases: 2*{num_cases}={num_digits}")
+            print("\nFile OK: "+str(num_digits)+" digits fit correctly in "+str(num_cases)+" cases: 2*"+str(num_cases)+"="+str(num_digits))
             return True
 
     def set_cell_value(self, i, j, v):
         # When setting a cell value, it also increments the number of known letters of vertical and horizontal numbers
         c = self.xy[i][j]
         if dbg:
-            print(f"Setting cell [{i},{j}] to value {v}")
+            print("Setting cell ["+str(i)+","+str(j)+"] to value "+str(v))
         # the value is already set, nothing to do
         if c.value == v: return
         c.value = v
@@ -230,7 +233,7 @@ class Game:
         # self.grid[i] = self.grid[i][0:j]+v+self.grid[i][j+1:]
         lh = c.hor_num_length
         lv = c.ver_num_length
-        if dbg: print(f"Writing {v} at {i},{j}, hor len is {lh}, ver len is {lv}")
+        if dbg: print("Writing "+str(v)+" at "+str(i)+","+str(j)+", hor len is "+str(lh)+", ver len is "+str(lv))
         self.xy[i][j-c.hor_pos].num_known_h += 1
         # If all digits on horizontal number are known, remove that entry from num_list
         if self.xy[i][j-c.hor_pos].num_known_h == lh:
@@ -239,17 +242,17 @@ class Game:
                 vv=self.xy[i][j-c.hor_pos+n].value
                 value += vv
             self.num_list[lh].pop(self.num_list[lh].index(value))
-            if dbg: print(f"Removed entry {value}: that entry was used horizontally")
+            if dbg: print("Removed entry "+str(value)+": that entry was used horizontally")
         # If all digits on vertical number are known, remove that entry from num_list
         self.xy[i-c.ver_pos][j].num_known_v += 1
         if self.xy[i-c.ver_pos][j].num_known_v == lv:
             value = ""
             for n in range(lv):
                 vv = self.xy[i-c.ver_pos+n][j].value
-                print(f"[{i},{j}]: c.ver_pos={c.ver_pos}, n={n}, value={value}, vv={vv}")
+                print("["+str(i)+","+str(j)+"]: c.ver_pos="+str(c.ver_pos)+", n="+str(n)+", value="+str(value)+", vv="+str(vv))
                 value += vv
             self.num_list[lv].pop(self.num_list[lv].index(value))
-            if dbg: print(f"Removed entry {value}: that entry was used vertically")
+            if dbg: print("Removed entry "+str(value)+": that entry was used vertically")
 
     # start_position is a structure [row, col, horizontal]
     def check_write_number(self, row, col, horizontal, value):
@@ -268,12 +271,12 @@ class Game:
     def check_write_horizontal(self, row, col, value):
         fit = False
         ll = len(value)
-        if dbg: print(f"Writing {value} to line {row} pos {col}], hor_pos={self.xy[row][col].hor_pos}, len={self.xy[row][col].hor_num_length}")
+        if dbg: print("Writing "+str(value)+" to line "+str(row)+" pos "+str(col)+"], hor_pos="+str(self.xy[row][col].hor_pos)+", len="+str(self.xy[row][col].hor_num_length))
         if self.xy[row][col].hor_pos != 0: return False
         if ll != self.xy[row][col].hor_num_length: return False
         for n in range(ll):
             cell=self.xy[row][col+n]
-            if dbg: print(f"Cell value is {cell.value}, compared to {value[n]}")
+            if dbg: print("Cell value is "+str(cell.value)+", compared to "+str(value[n]))
             if cell.value != value[n]:
                 if cell.value != -1:
                     return False
@@ -311,12 +314,12 @@ class Game:
     def check_write_vertical(self, row, col, value):
         fit = False
         ll = len(value)
-        if dbg: print(f"Writing {value} to column {col} pos {row}], ver_pos={self.xy[row][col].ver_pos}, len={self.xy[row][col].ver_num_length}")
+        if dbg: print("Writing "+str(value)+" to column "+str(col)+" pos "+str(row)+"], ver_pos="+str(self.xy[row][col].ver_pos)+", len="+str(self.xy[row][col].ver_num_length))
         if self.xy[row][col].ver_pos != 0: return False
         if ll != self.xy[row][col].ver_num_length: return False
         for n in range(ll):
             cell=self.xy[row+n][col]
-            if dbg: print(f"Cell value is {cell.value}, compared to {value[n]}, ll={ll}")
+            if dbg: print("Cell value is "+str(cell.value)+", compared to "+str(value[n])+", ll="+str(ll))
             if cell.value != value[n]:
                 if cell.value != -1:
                     return False
@@ -382,13 +385,13 @@ class Game:
             for i in range(0, self.grid_size):
                 nb = len(self.start_positions[i])
                 if nb>0:
-                    print(f"Start cells for {i} char numbers are:")
+                    print("Start cells for "+str(i)+" char numbers are:")
                     for j in range(0, nb):
                         if self.start_positions[i][j].horizontal:
                             direct="horizontal"
                         else:
                             direct="vertical"
-                        print(f"[{self.start_positions[i][j].row},{self.start_positions[i][j].col}]->{direct}")
+                        print("["+str(self.start_positions[i][j].row)+","+str(self.start_positions[i][j].col)+"]->"+str(direct))
 
 def recurse(g, row, col, hor, value):
     # This function will select a position to write a number from the list
@@ -405,13 +408,15 @@ def recurse(g, row, col, hor, value):
     # The issue is that write_number changes "g" and we don't want that within the loop
     if row != -1:
         g.write_number(row, col, hor, value)
-        print(f"Number {value} is being written at position {row}:{col}")
+        print("Number "+str(value)+" is being written at position "+str(row)+":"+str(col))
         print_grid(g.grid_size, g.xy)
 
     g.get_start_positions()
     if len(g.start_pos_order) == 0:
         print("All numbers have been placed!")
         print_grid(g.grid_size, g.xy, True, True)
+        # Return False so if we're looking for another solution, we'll continue assuming that that last value did't work
+        return False
     else:
         number_of_entries_of_that_size = g.start_pos_order[0][0]
         number_size = g.start_pos_order[0][1]
@@ -438,7 +443,7 @@ def debug_data():
     global g
     for i in range(0,4):
         for j in range(0,4):
-            print(f"[{i},{j}]: HorPos={g.xy[i][j].hor_pos}, VerPos={g.xy[i][j].ver_pos}, Value={g.xy[i][j].value}")
+            print("["+str(i)+","+str(j)+"]: HorPos="+str(g.xy[i][j].hor_pos)+", VerPos="+str(g.xy[i][j].ver_pos)+", Value="+str(g.xy[i][j].value))
 
 
 filename="Numbers.txt"
@@ -449,5 +454,11 @@ print_grid(g.grid_size, g.xy)
 # Call recurse with dummy values so I don't have to calculate them here
 recurse(g, -1, -1, -1, -1)
 
+if number_of_solutions == 0:
+    print("Found no solution")
+elif number_of_solutions == 1:
+    print("Only 1 solution can be found")
+else:
+    print(str(number_of_solutions)+" found")
 print("Done")
 
