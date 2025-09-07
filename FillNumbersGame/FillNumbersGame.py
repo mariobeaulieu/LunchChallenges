@@ -38,11 +38,8 @@ def print_grid(grid_size, grid_of_cells, pause=False, solution=False):
         bgcol = "white"
         tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).place(x=10, y=467, anchor="w")
         tk.Button(root, text="Continue to solution", fg=fgcol, bg=bgcol, command=continue_to_solution).place(x=grid_width/2, y=467,anchor="center")
-        tk.Button(root, text="Stop", fg=fgcol, bg=bgcol, command=exit_program).place(x=grid_width-10,y=467,anchor="e")
+        tk.Button(root, text="Stop", fg=fgcol, bg=bgcol, command=lambda: exit()).place(x=grid_width-10,y=467,anchor="e")
         root.mainloop()
-
-def exit_program():
-    exit()
 
 def step_program():
     global step_mode, root
@@ -454,11 +451,13 @@ print_grid(g.grid_size, g.xy)
 # Call recurse with dummy values so I don't have to calculate them here
 recurse(g, -1, -1, -1, -1)
 
+root=tk.Tk()
 if number_of_solutions == 0:
-    print("Found no solution")
+    label = tk.Label(root, text="Found no solution")
 elif number_of_solutions == 1:
-    print("Only 1 solution can be found")
+    label = tk.Label(root, text="Only 1 solution can be found")
 else:
-    print(str(number_of_solutions)+" found")
-print("Done")
-
+    label = tk.Label(root, str(number_of_solutions)+" found")
+label.place(relx=0.5, rely=0.3, anchor="center")
+tk.Button(root, text="Close all", command=lambda: exit()).place(relx=0.5, rely=0.7, anchor="center")
+tk.mainloop()
