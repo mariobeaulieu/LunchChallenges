@@ -2,15 +2,19 @@
 import sys
 import tkinter as tk
 
-dbg=False
+dbg=True
 maxNum = 0
 count = 0
 step_mode = True
 number_of_solutions = 0
 root = ""
+g = [[]]
+grid = [[]]
+grid_size=13
+grid_size_max=15
 
-def print_grid(grid_size, grid_of_cells, pause=False, solution=False):
-    global count, step_mode, root, number_of_solutions
+def print_grid(grid_of_cells, pause=False, solution=False):
+    global count, step_mode, root, number_of_solutions, grid_size
     grid_width = 467
     count += 1
     if pause or step_mode:
@@ -102,13 +106,11 @@ class Cell:
 
 class Game:
     def __init__(self, filename="Numbers.txt"):
-        # xy is an array of up to 13 lines and columns and each entry contains a Cell
-        global dbg
-        self.grid_size = 13
+        # grid is an array of up to 13 lines and columns and each entry contains a Cell
+        global dbg, grid_size
         # Grid is up to grid_size x grid_size
         # It comprises grid_size lines, and each line is a list of cells
-        self.xy = [[], [], [], [], [], [], [], [], [], [], [], [], []]
-        # num_list is the list of numbers to fit in the grid
+        self.grid = [[Cell() for x in range(grid_size)] for y in range(grid_size)]        # num_list is the list of numbers to fit in the grid
         self.num_list = [[], [], [], [], [], [], [], [], [], [], [], [], []]
         # start_positions is the list of x-y coordinates where a horizontal or vertical number starts
         self.start_positions = [[], [], [], [], [], [], [], [], [], [], [], [], []]
@@ -117,59 +119,52 @@ class Game:
         # and is ordered with the lowest count first.
         # [2, 9] means start_positions[9] has 2 entries of 9 digits
         self.start_pos_order = []
-        # Initialize the whole grid as an array of black cells
-        for i in range(self.grid_size):
-            for j in range(self.grid_size):
-                self.xy[i].append(Cell())
         # Use the grid to change black cells into number cells and set the horizontal pos in the number
-        if dbg: print("Creating the Game grid with size "+str(self.grid_size)+" x "+str(self.grid_size))
+        if dbg: print("Creating the Game grid with size "+str(grid_size)+" x "+str(grid_size))
         self.read_grid(filename)
-        if dbg: print("Grid size = "+str(self.grid_size))
-        for i in range(self.grid_size):
+        if dbg: print("Grid size = "+str(grid_size))
+        for row in range(grid_size):
             h=0
-            for j in range(self.grid_size):
-                if self.xy[i][j].contains_number:
-                    self.xy[i][j].set_hor_pos(h)
+            for col in range(grid_size):
+                if self.grid[row][col].contains_number:
+                    self.grid[row][col].set_hor_pos(h)
                     h+=1
                 else:
                     h=0
-        for j in range(self.grid_size):
+        for col in range(grid_size):
             v=0
-            for i in range(self.grid_size):
-                if self.xy[i][j].contains_number:
-                   self.xy[i][j].set_ver_pos(v)
+            for row in range(grid_size):
+                if self.grid[row][col].contains_number:
+                   self.grid[row][col].set_ver_pos(v)
                    v += 1
                 else:
                    v = 0
         # Set number length horizontally
-        for i in range(self.grid_size):
+        for row in range(grid_size):
             h=0
-            for j in range(self.grid_size-1,-1,-1):
-                if self.xy[i][j].contains_number:
-                    if h == 0: h = self.xy[i][j].hor_pos+1
-                    self.xy[i][j].set_hor_num_length(h)
+            for col in range(grid_size-1,-1,-1):
+                if self.grid[row][col].contains_number:
+                    if h == 0: h = self.grid[row][col].hor_pos+1
+                    self.grid[row][col].set_hor_num_length(h)
                 else:
                     h=0
         # Set number length vertically
-        for j in range(self.grid_size):
+        for col in range(grid_size):
             v=0
-            for i in range(self.grid_size-1,-1,-1):
-                if self.xy[i][j].contains_number:
-                    if v == 0: v = self.xy[i][j].ver_pos+1
-                    self.xy[i][j].set_ver_num_length(v)
+            for row in range(grid_size-1,-1,-1):
+                if self.grid[row][col].contains_number:
+                    if v == 0: v = self.grid[row][col].ver_pos+1
+                    self.grid[row][col].set_ver_num_length(v)
                 else:
                     v=0
         if dbg:
-            for i in range(self.grid_size):
-                for j in range(self.grid_size):
-                    print("["+str(i)+":"+str(j)+"]: contains_number="+str(self.xy[i][j].contains_number)+", HorNumLen: "+str(self.xy[i][j].hor_num_length)+", HorPos: "+str(self.xy[i][j].hor_pos)+", VerNumLen: "+str(self.xy[i][j].ver_num_length)+", VerPos: "+str(self.xy[i][j].ver_pos))
+            for i in range(grid_size):
+                for j in range(grid_size):
+                    print("["+str(i)+":"+str(j)+"]: contains_number="+str(self.grid[i][j].contains_number)+", HorNumLen: "+str(self.grid[i][j].hor_num_length)+", HorPos: "+str(self.grid[i][j].hor_pos)+", VerNumLen: "+str(self.grid[i][j].ver_num_length)+", VerPos: "+str(self.grid[i][j].ver_pos))
 
-    def copy_xy(self):
-        nouveau_xy = [[], [], [], [], [], [], [], [], [], [], [], [], []]
-        for i in range(len(self.xy)):
-            for j in range(len(self.xy[i])):
-                nouveau_xy[i].append(self.xy[i][j].copy())
-        return nouveau_xy
+    def copy_grid(self):
+        new_grid = [[self.grid[row][col].copy() for col in range(grid_size)] for row in range(grid_size)]
+        return new_grid
 
     def copy_num_list(self):
         nouveau_list = [[], [], [], [], [], [], [], [], [], [], [], [], []]
@@ -192,7 +187,7 @@ class Game:
                     if dbg: print(""+str(length)+"-digit number: <"+str(line)+">")
                     self.num_list[length].append(line)
                     num_digits += length
-                    if length > self.grid_size:
+                    if length > grid_size:
                         print("Number too long ("+str(length)+")\nMaximum length of numbers set to "+str(maxNum))
                         return False
                 else:
@@ -202,11 +197,11 @@ class Game:
                 for i in range(length):
                     if line[i] == "0":
                         if dbg: print("["+str(gridline)+","+str(i)+"]: Contains_Number")
-                        self.xy[gridline][i].contains_number = True
+                        self.grid[gridline][i].contains_number = True
                         num_cases += 1
                     else:
                         if dbg: print("["+str(gridline)+","+str(i)+"]: Not a Number")
-                        self.xy[gridline][i].contains_number = False
+                        self.grid[gridline][i].contains_number = False
                 gridline += 1
             line = file.readline().strip()
             length = len(line)
@@ -220,7 +215,7 @@ class Game:
 
     def set_cell_value(self, i, j, v):
         # When setting a cell value, it also increments the number of known letters of vertical and horizontal numbers
-        c = self.xy[i][j]
+        c = self.grid[i][j]
         if dbg:
             print("Setting cell ["+str(i)+","+str(j)+"] to value "+str(v))
         # the value is already set, nothing to do
@@ -231,21 +226,21 @@ class Game:
         lh = c.hor_num_length
         lv = c.ver_num_length
         if dbg: print("Writing "+str(v)+" at "+str(i)+","+str(j)+", hor len is "+str(lh)+", ver len is "+str(lv))
-        self.xy[i][j-c.hor_pos].num_known_h += 1
+        self.grid[i][j-c.hor_pos].num_known_h += 1
         # If all digits on horizontal number are known, remove that entry from num_list
-        if self.xy[i][j-c.hor_pos].num_known_h == lh:
+        if self.grid[i][j-c.hor_pos].num_known_h == lh:
             value = ""
             for n in range(lh):
-                vv=self.xy[i][j-c.hor_pos+n].value
+                vv=self.grid[i][j-c.hor_pos+n].value
                 value += vv
             self.num_list[lh].pop(self.num_list[lh].index(value))
             if dbg: print("Removed entry "+str(value)+": that entry was used horizontally")
         # If all digits on vertical number are known, remove that entry from num_list
-        self.xy[i-c.ver_pos][j].num_known_v += 1
-        if self.xy[i-c.ver_pos][j].num_known_v == lv:
+        self.grid[i-c.ver_pos][j].num_known_v += 1
+        if self.grid[i-c.ver_pos][j].num_known_v == lv:
             value = ""
             for n in range(lv):
-                vv = self.xy[i-c.ver_pos+n][j].value
+                vv = self.grid[i-c.ver_pos+n][j].value
                 print("["+str(i)+","+str(j)+"]: c.ver_pos="+str(c.ver_pos)+", n="+str(n)+", value="+str(value)+", vv="+str(vv))
                 value += vv
             self.num_list[lv].pop(self.num_list[lv].index(value))
@@ -268,25 +263,25 @@ class Game:
     def check_write_horizontal(self, row, col, value):
         fit = False
         ll = len(value)
-        if dbg: print("Writing "+str(value)+" to line "+str(row)+" pos "+str(col)+"], hor_pos="+str(self.xy[row][col].hor_pos)+", len="+str(self.xy[row][col].hor_num_length))
-        if self.xy[row][col].hor_pos != 0: return False
-        if ll != self.xy[row][col].hor_num_length: return False
+        if dbg: print("Writing "+str(value)+" to line "+str(row)+" pos "+str(col)+"], hor_pos="+str(self.grid[row][col].hor_pos)+", len="+str(self.grid[row][col].hor_num_length))
+        if self.grid[row][col].hor_pos != 0: return False
+        if ll != self.grid[row][col].hor_num_length: return False
         for n in range(ll):
-            cell=self.xy[row][col+n]
+            cell=self.grid[row][col+n]
             if dbg: print("Cell value is "+str(cell.value)+", compared to "+str(value[n]))
             if cell.value != value[n]:
                 if cell.value != -1:
                     return False
                 # If we are here, it means the cell value is currently empty and we need to
                 # check if any horizontal number going through that position with that digit exists
-                vpos = self.xy[row][col+n].ver_pos
+                vpos = self.grid[row][col+n].ver_pos
                 # lver is the length of the vertical number
-                lver = self.xy[row-vpos][col+n].ver_num_length
+                lver = self.grid[row-vpos][col+n].ver_num_length
                 # gather the list of "known" digits and their position for the vertical number
                 known=[[vpos, value[n]]]
                 for i in range(lver):
-                    if self.xy[row-vpos+i][col+n].value != -1:
-                        known.append([i, self.xy[row-vpos+i][col+n].value])
+                    if self.grid[row-vpos+i][col+n].value != -1:
+                        known.append([i, self.grid[row-vpos+i][col+n].value])
                 # Now scan every number lver-digit long to see if any would fit
                 for i in range(len(self.num_list[lver])):
                     number_to_test = self.num_list[lver][i]
@@ -311,25 +306,25 @@ class Game:
     def check_write_vertical(self, row, col, value):
         fit = False
         ll = len(value)
-        if dbg: print("Writing "+str(value)+" to column "+str(col)+" pos "+str(row)+"], ver_pos="+str(self.xy[row][col].ver_pos)+", len="+str(self.xy[row][col].ver_num_length))
-        if self.xy[row][col].ver_pos != 0: return False
-        if ll != self.xy[row][col].ver_num_length: return False
+        if dbg: print("Writing "+str(value)+" to column "+str(col)+" pos "+str(row)+"], ver_pos="+str(self.grid[row][col].ver_pos)+", len="+str(self.grid[row][col].ver_num_length))
+        if self.grid[row][col].ver_pos != 0: return False
+        if ll != self.grid[row][col].ver_num_length: return False
         for n in range(ll):
-            cell=self.xy[row+n][col]
+            cell=self.grid[row+n][col]
             if dbg: print("Cell value is "+str(cell.value)+", compared to "+str(value[n])+", ll="+str(ll))
             if cell.value != value[n]:
                 if cell.value != -1:
                     return False
                 # If we are here, it means the cell value is currently empty and we need to
                 # check if any horizontal number going through that position with that digit exists
-                hpos = self.xy[row+n][col].hor_pos
+                hpos = self.grid[row+n][col].hor_pos
                 # lhor is the length of the horizontal number
-                lhor = self.xy[row+n][col-hpos].hor_num_length
+                lhor = self.grid[row+n][col-hpos].hor_num_length
                 # gather the list of "known" digits and their position for the horizontal number
                 known = [[hpos, value[n]]]
                 for i in range(lhor):
-                    if self.xy[row+n][col-hpos+i].value != -1:
-                        known.append([i, self.xy[row+n][col-hpos+i].value])
+                    if self.grid[row+n][col-hpos+i].value != -1:
+                        known.append([i, self.grid[row+n][col-hpos+i].value])
                 # Now scan every number lhor-digit long to see if any would fit
                 for i in range(len(self.num_list[lhor])):
                     number_to_test = self.num_list[lhor][i]
@@ -355,13 +350,13 @@ class Game:
     def get_start_positions(self):
         # Reset the list of start positions
         self.start_positions = [[], [], [], [], [], [], [], [], [], [], [], [], []]
-        for i in range(0, self.grid_size):
-            for j in range(0, self.grid_size):
-                ll = self.xy[i][j].hor_num_length
-                if self.xy[i][j].hor_pos == 0 and self.xy[i][j].num_known_h < ll:
+        for i in range(0, grid_size):
+            for j in range(0, grid_size):
+                ll = self.grid[i][j].hor_num_length
+                if self.grid[i][j].hor_pos == 0 and self.grid[i][j].num_known_h < ll:
                     self.start_positions[ll].append(Start_cell(i,j,True))
-                ll = self.xy[i][j].ver_num_length
-                if self.xy[i][j].ver_pos == 0 and self.xy[i][j].num_known_v < ll:
+                ll = self.grid[i][j].ver_num_length
+                if self.grid[i][j].ver_pos == 0 and self.grid[i][j].num_known_v < ll:
                     self.start_positions[ll].append(Start_cell(i,j,False))
         # Create a list of shortest list of start position to longest
         # start_pos_order is a list of lists [count, index]
@@ -379,7 +374,7 @@ class Game:
                     self.start_pos_order[i], self.start_pos_order[j] = self.start_pos_order[j], self.start_pos_order[i]
         if dbg: print(self.start_pos_order)
         if dbg:
-            for i in range(0, self.grid_size):
+            for i in range(0, grid_size):
                 nb = len(self.start_positions[i])
                 if nb>0:
                     print("Start cells for "+str(i)+" char numbers are:")
@@ -406,12 +401,12 @@ def recurse(g, row, col, hor, value):
     if row != -1:
         g.write_number(row, col, hor, value)
         print("Number "+str(value)+" is being written at position "+str(row)+":"+str(col))
-        print_grid(g.grid_size, g.xy)
+        print_grid(g.grid)
 
     g.get_start_positions()
     if len(g.start_pos_order) == 0:
         print("All numbers have been placed!")
-        print_grid(g.grid_size, g.xy, True, True)
+        print_grid(g.grid, True, True)
         # Return False so if we're looking for another solution, we'll continue assuming that that last value did't work
         return False
     else:
@@ -423,41 +418,107 @@ def recurse(g, row, col, hor, value):
 
         # Save game features to restore them if writing the word didn't work
         g2 = Game()
-        g2.grid_size = g.grid_size
         for i in range(0, number_of_entries_of_that_size):
             # Write the number in the grid, and call the recursive loop to fit everything
             # if it eventually returns with False, it means that we should have tried
             # with the next value for
             g2.num_list = g.copy_num_list()
-            g2.xy = g.copy_xy()
+            g2.grid = g.copy_grid()
             g2.get_start_positions()
             value = g2.num_list[number_size][i]
             word_ok = g2.check_write_number(row, col, hor, value)
             if word_ok:
                 recurse(g2, row, col, hor, value)
 
-def debug_data():
-    global g
-    for i in range(0,4):
-        for j in range(0,4):
-            print("["+str(i)+","+str(j)+"]: HorPos="+str(g.xy[i][j].hor_pos)+", VerPos="+str(g.xy[i][j].ver_pos)+", Value="+str(g.xy[i][j].value))
+
+def start_game():
+    global grid_size
+    root.destroy()
+    g = Game(filename)
+    print_grid(g.grid)
+    # Call recurse with dummy values so I don't have to calculate them here
+    recurse(g, -1, -1, -1, -1)
+    print("After the original recurse")
 
 
+def design_game():
+    def colorflip(x, y):
+        global root, grid, g
+        if g[x][y] == "0":
+            g[x][y] = "#"
+            bgcol = "black"
+            fgcol = "white"
+        else:
+            g[x][y] = "0"
+            fgcol = "black"
+            bgcol = "white"
+        grid[x][y].configure(fg=fgcol, bg=bgcol)
+
+    global root, g, grid, grid_size_max
+    root.destroy()
+    root = tk.Tk()
+    root.title("Design a Fill-Number Game")
+    grid_width = 400
+    grid_height = 400
+    root.geometry(str(grid_width) + "x" + str(grid_height))
+    label = tk.Label(root, anchor="center", text="Enter the game size").place(relx=0.5, rely=0.25, anchor="center")
+    current_value = tk.StringVar()
+    spin = tk.Spinbox(root, from_=3, to=grid_size_max, textvariable=current_value).place(relx=0.5, rely=0.5, anchor="center")
+    tk.Button(root, text="OK", command=lambda: root.destroy()).place(relx=0.2, rely=0.8, anchor="w")
+    tk.Button(root, text="Exit", command=lambda: exit()).place(relx=0.8, rely=0.8, anchor="e")
+    root.mainloop()
+    grid_size = int(current_value.get())
+
+    # Now display a grid of the required size made with buttons
+    root=tk.Tk()
+    btn_ok = tk.PhotoImage(file="Button_OK_30.png")
+    btn_cancel = tk.PhotoImage(file="Button_Cancel_30.png")
+    root.title("Click on the cells to flip its color")
+    root.geometry(str(grid_width) + "x" + str(grid_height))
+    fgcol = "black"
+    bgcol = "white"
+    # "g" is the numbers in the grid, and the grid is initially all numbers
+    g = [ [ "0" for x in range(grid_size)] for y in range(grid_size)]
+    grid = [ [ tk.Button(root, text="   ", fg=fgcol, bg=bgcol, command=lambda i=y, j=x: colorflip(i, j)) for x in range(grid_size)] for y in range(grid_size)]
+    # Now that the grid has been created, modify its elements to add a command to flip its color
+    for x in range(grid_size):
+        for y in range(grid_size):
+            grid[x][y].grid(row=x, column=y, padx=0, pady=0)
+            # grid[i][j].configure(command=lambda: colorflip(i, j))
+    # And add buttons for OK/Cancel at the bottom
+
+    tk.Button(root, image=btn_ok, command=lambda: root.destroy()).grid(row=grid_size+1, column=0, padx=0, pady=0)
+    tk.Button(root, image=btn_cancel, command=lambda: exit()).grid(row=grid_size+1, column=grid_size-1, padx=0, pady=0)
+    root.mainloop()
+    for i in range(grid_size):
+        print(g[i])
+    # Now use "g" to transform "grid" into a grid of cells
+
+    
+
+grid_width = 400
+grid_height = 400
 filename="Numbers.txt"
 if len(sys.argv) > 1:
     filename=sys.argv[1]
-g=Game(filename)
-print_grid(g.grid_size, g.xy)
-# Call recurse with dummy values so I don't have to calculate them here
-recurse(g, -1, -1, -1, -1)
+
+root = tk.Tk()
+root.title("Fill-Number Game")
+root.geometry(str(grid_width)+"x"+str(grid_height))
+label = tk.Label(root, anchor="center", text="What do you want to do?").place(relx=0.5, rely=0.3, anchor="center")
+tk.Button(root, text="Play", command=lambda: start_game()).place(relx=0.1, rely=0.8, anchor="w")
+tk.Button(root, text="Design a game", command=lambda: design_game()).place(relx=0.5, rely=0.8, anchor="center")
+tk.Button(root, text="Exit", command=lambda: exit()).place(relx=0.9, rely=0.8, anchor="e")
+root.mainloop()
 
 root=tk.Tk()
+root.geometry(str(grid_width)+"x"+str(grid_height))
 if number_of_solutions == 0:
-    label = tk.Label(root, text="Found no solution")
+    label = tk.Label(root, text="Found no solution after "+str(count)+" iterations")
 elif number_of_solutions == 1:
-    label = tk.Label(root, text="Only 1 solution can be found")
+    label = tk.Label(root, text="Only 1 solution can be found after "+str(count)+" iterations")
 else:
-    label = tk.Label(root, str(number_of_solutions)+" found")
+    label = tk.Label(root, str(number_of_solutions)+" found after "+str(count)+" iterations")
 label.place(relx=0.5, rely=0.3, anchor="center")
 tk.Button(root, text="Close all", command=lambda: exit()).place(relx=0.5, rely=0.7, anchor="center")
 tk.mainloop()
