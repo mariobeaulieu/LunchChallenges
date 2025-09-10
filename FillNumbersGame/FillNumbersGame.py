@@ -1,6 +1,9 @@
 #!/usr/bin/python3
+import os
 import sys
 import tkinter as tk
+from tkinter import ttk
+from random import random
 
 dbg=True
 maxNum = 0
@@ -8,14 +11,13 @@ count = 0
 step_mode = True
 number_of_solutions = 0
 root = ""
-g = [[]]
 grid = [[]]
-grid_size=13
+grid_size=0
 grid_size_max=15
+grid_width = 400
 
 def print_grid(grid_of_cells, pause=False, solution=False):
-    global count, step_mode, root, number_of_solutions, grid_size
-    grid_width = 467
+    global count, step_mode, root, number_of_solutions, grid_size, grid_width
     count += 1
     if pause or step_mode:
         root = tk.Tk()
@@ -24,7 +26,7 @@ def print_grid(grid_of_cells, pause=False, solution=False):
             root.title("Solution #"+str(number_of_solutions)+" found after "+str(count)+" attempts")
         else:
             root.title("Fill Numbers Game - "+str(count))
-        root.geometry(str(grid_width)+"x500")
+        root.geometry(str(grid_width)+"x"+str(grid_width+30))
 
         for i in range(grid_size):
             for j in range(grid_size):
@@ -40,9 +42,9 @@ def print_grid(grid_of_cells, pause=False, solution=False):
                 tk.Button(root, text=tx, fg=fgcol, bg=bgcol).grid(row=i, column=j, padx=0, pady=0)
         fgcol = "black"
         bgcol = "white"
-        tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).place(x=10, y=467, anchor="w")
-        tk.Button(root, text="Continue to solution", fg=fgcol, bg=bgcol, command=continue_to_solution).place(x=grid_width/2, y=467,anchor="center")
-        tk.Button(root, text="Stop", fg=fgcol, bg=bgcol, command=lambda: exit()).place(x=grid_width-10,y=467,anchor="e")
+        tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).place(x=10, y=grid_width+10, anchor="w")
+        tk.Button(root, text="Continue to solution", fg=fgcol, bg=bgcol, command=continue_to_solution).place(x=grid_width/2, y=grid_width+10,anchor="center")
+        tk.Button(root, text="Stop", fg=fgcol, bg=bgcol, command=lambda: exit()).place(x=grid_width-10,y=grid_width+10,anchor="e")
         root.mainloop()
 
 def step_program():
@@ -105,15 +107,15 @@ class Cell:
 
 
 class Game:
-    def __init__(self, filename="Numbers.txt"):
-        # grid is an array of up to 13 lines and columns and each entry contains a Cell
+    def __init__(self):
+        # grid is an array of up to grid_size_max lines and columns and each entry contains a Cell
         global dbg, grid_size
         # Grid is up to grid_size x grid_size
         # It comprises grid_size lines, and each line is a list of cells
-        self.grid = [[Cell() for x in range(grid_size)] for y in range(grid_size)]        # num_list is the list of numbers to fit in the grid
-        self.num_list = [[], [], [], [], [], [], [], [], [], [], [], [], []]
+        self.grid = []
+        self.num_list = []
         # start_positions is the list of x-y coordinates where a horizontal or vertical number starts
-        self.start_positions = [[], [], [], [], [], [], [], [], [], [], [], [], []]
+        self.start_positions = []
         # start_pos_order is a list of lists [count, index]
         # where count is the number of entries in start_positions[index]
         # and is ordered with the lowest count first.
@@ -121,8 +123,8 @@ class Game:
         self.start_pos_order = []
         # Use the grid to change black cells into number cells and set the horizontal pos in the number
         if dbg: print("Creating the Game grid with size "+str(grid_size)+" x "+str(grid_size))
-        self.read_grid(filename)
-        if dbg: print("Grid size = "+str(grid_size))
+
+    def set_hor_ver_pos_in_grid(self):
         for row in range(grid_size):
             h=0
             for col in range(grid_size):
@@ -163,48 +165,53 @@ class Game:
                     print("["+str(i)+":"+str(j)+"]: contains_number="+str(self.grid[i][j].contains_number)+", HorNumLen: "+str(self.grid[i][j].hor_num_length)+", HorPos: "+str(self.grid[i][j].hor_pos)+", VerNumLen: "+str(self.grid[i][j].ver_num_length)+", VerPos: "+str(self.grid[i][j].ver_pos))
 
     def copy_grid(self):
+        global grid_size
+        grid_size = len(self.grid)
         new_grid = [[self.grid[row][col].copy() for col in range(grid_size)] for row in range(grid_size)]
         return new_grid
 
     def copy_num_list(self):
-        nouveau_list = [[], [], [], [], [], [], [], [], [], [], [], [], []]
+        ll = len(self.num_list)
+        nouveau_list = [[] for _ in range(ll)]
         for i in range(len(self.num_list)):
             for j in range(len(self.num_list[i])):
                 nouveau_list[i].append(self.num_list[i][j])
         return nouveau_list
 
-    def read_grid(self, filename: "Numbers.txt") -> bool:
-        reading_numbers = True
+    def read_grid(self, filename) -> bool:
+        global grid_size
         num_digits = 0
         num_cases = 0
         gridline = 0
         file = open(filename, "r")
         line = file.readline().strip()
         length = len(line)
+        grid_size = length
+        self.grid = [[Cell() for i in range(grid_size)] for j in range(grid_size)]
+        self.num_list = [[] for i in range(grid_size)]
         while length > 0:
-            if reading_numbers:
-                if line != "GRID":
-                    if dbg: print(""+str(length)+"-digit number: <"+str(line)+">")
-                    self.num_list[length].append(line)
-                    num_digits += length
-                    if length > grid_size:
-                        print("Number too long ("+str(length)+")\nMaximum length of numbers set to "+str(maxNum))
-                        return False
-                else:
-                    reading_numbers = False
-            else:
-                if dbg: print("Grid: <"+str(line)+">")
+            # The grid is the first thing in the file
+            # The grid is assumed to be square
+            if gridline < grid_size:
                 for i in range(length):
                     if line[i] == "0":
-                        if dbg: print("["+str(gridline)+","+str(i)+"]: Contains_Number")
+                        if dbg: print("[" + str(gridline) + "," + str(i) + "]: Contains_Number")
                         self.grid[gridline][i].contains_number = True
                         num_cases += 1
                     else:
-                        if dbg: print("["+str(gridline)+","+str(i)+"]: Not a Number")
+                        if dbg: print("[" + str(gridline) + "," + str(i) + "]: Not a Number")
                         self.grid[gridline][i].contains_number = False
                 gridline += 1
+            else:
+                if dbg: print(""+str(length)+"-digit number: <"+str(line)+">")
+                self.num_list[length].append(line)
+                num_digits += length
+                if length > grid_size:
+                    print("Number too long ("+str(length)+")\nMaximum length of numbers set to "+str(grid_size))
+                    return False
             line = file.readline().strip()
             length = len(line)
+
         if num_cases * 2 != num_digits:
             print(
                 f"Error in the file: "+str(num_digits)+" digits should be an even number and should be equal to 2* number of cases (="+str(num_cases)+")")
@@ -212,6 +219,18 @@ class Game:
         else:
             print("\nFile OK: "+str(num_digits)+" digits fit correctly in "+str(num_cases)+" cases: 2*"+str(num_cases)+"="+str(num_digits))
             return True
+
+    def create_grid(self, gg):
+        # We have the grid as a list of rows of of "0" and "#"
+        # We need to generate a "self.grid"
+        self.grid = [[Cell() for i in range(grid_size)] for j in range(grid_size)]
+        for row in range(grid_size):
+            for col in range(grid_size):
+                if gg[row][col] == "0":
+                    self.grid[row][col].contains_number = True
+                    self.grid[row][col].value = int(random()*10)
+                else:
+                    self.grid[row][col].contains_number = False
 
     def set_cell_value(self, i, j, v):
         # When setting a cell value, it also increments the number of known letters of vertical and horizontal numbers
@@ -385,7 +404,7 @@ class Game:
                             direct="vertical"
                         print("["+str(self.start_positions[i][j].row)+","+str(self.start_positions[i][j].col)+"]->"+str(direct))
 
-def recurse(g, row, col, hor, value):
+def recurse(g, row, col, hor, value, silent=False):
     # This function will select a position to write a number from the list
     # But writing a number makes it disappear from the list, so it needs first to copy the entire game so if the
     # number wasn't right we can use another one instead
@@ -401,12 +420,14 @@ def recurse(g, row, col, hor, value):
     if row != -1:
         g.write_number(row, col, hor, value)
         print("Number "+str(value)+" is being written at position "+str(row)+":"+str(col))
-        print_grid(g.grid)
+        if not silent:
+            print_grid(g.grid)
 
     g.get_start_positions()
     if len(g.start_pos_order) == 0:
         print("All numbers have been placed!")
-        print_grid(g.grid, True, True)
+        if not silent or dbg:
+            print_grid(g.grid, True, True)
         # Return False so if we're looking for another solution, we'll continue assuming that that last value did't work
         return False
     else:
@@ -430,11 +451,105 @@ def recurse(g, row, col, hor, value):
             if word_ok:
                 recurse(g2, row, col, hor, value)
 
+# Now this function will generate numbers randomly
+def generate_number_list(gg):
+    global grid_size
+    data_not_verified = True
+    # Data will be verified when no duplicate exist
+    while data_not_verified:
+        # Generate random digits in the grid
+        for row in range(grid_size):
+            for col in range(grid_size):
+                if gg.grid[row][col].contains_number:
+                    gg.grid[row][col].value = int(random() * 10)
+
+        # Now create the number list from digits in the grid
+        # Horizontally first
+        gg.num_list=[[] for ll in range(grid_size+1)]
+        for row in range(grid_size):
+            number = ""
+            for col in range(grid_size):
+                if gg.grid[row][col].contains_number:
+                    number += str(gg.grid[row][col].value)
+                else:
+                    if number != "":
+                        gg.num_list[len(number)].append(number)
+                    number = ""
+            # If a number finished at the end of a row, we need to store it too
+            if number != "":
+                gg.num_list[len(number)].append(number)
+            number = ""
+        # Above created horizontal numbers, we still need to add vertical numbers
+        for col in range(grid_size):
+            number = ""
+            for row in range(grid_size):
+                if gg.grid[row][col].contains_number:
+                    number += str(gg.grid[row][col].value)
+                else:
+                    if number != "":
+                        gg.num_list[len(number)].append(number)
+                    number = ""
+            # If a number finished at the end of a column, we need to store it too
+            if number != "":
+                gg.num_list[len(number)].append(number)
+            number = ""
+        # Sort numbers
+        duplicate_found = False
+        for ll in range(len(gg.num_list)):
+            gg.num_list[ll].sort()
+            for n in range(1, len(gg.num_list[ll])):
+                if gg.num_list[ll][n-1] == gg.num_list[ll][n]:
+                    duplicate_found = True
+                    if dbg:
+                        print ("Duplicates found in numbers of "+str(ll)+" digits")
+                        for i in range(len(gg.num_list)):
+                            print(i, gg.num_list[i])
+                    break
+            if duplicate_found:
+                break
+        # If no duplicate found, data is considered verifier
+        data_not_verified = duplicate_found
+    if dbg:
+        print("List of numbers:")
+        for ll in range(len(gg.num_list)):
+            print (ll, gg.num_list[ll])
+    print_grid(gg.grid)
+
+    # Erase the grid and call recurse to find how many solutions exist
+    for row in range(grid_size):
+        for col in range(grid_size):
+            if gg.grid[row][col].contains_number:
+                gg.grid[row][col].value = -1
+
+    number_of_solutions = 0
+    silent= True # Recurse without any output: we want to count number of solutions
+    recurse(gg, -1, -1, -1, -1, silent)
 
 def start_game():
-    global grid_size
-    root.destroy()
-    g = Game(filename)
+    global grid_size, grid_width
+    root = tk.Tk()
+    root.title("Solve a Fill-Number Game")
+    grid_width = 400
+    root.geometry(str(grid_width) + "x" + str(grid_width))
+    label = tk.Label(root, anchor="center", text="Enter the name of the file").place(relx=0.5, rely=0.25, anchor="center")
+    filelist = [ i for i in os.listdir() if ".txt" in i ]
+    if dbg:
+        print(filelist)
+    current_value = tk.StringVar()
+    current_value.set(set(filelist[0]))
+    tk.OptionMenu(root, current_value, *filelist).place(relx=0.5, rely=0.5, anchor="center", relwidth=0.8)
+    tk.Button(root, text="OK", command=lambda: root.quit()).place(relx=0.2, rely=0.8, anchor="w")
+    tk.Button(root, text="Exit", command=lambda: exit()).place(relx=0.8, rely=0.8, anchor="e")
+    root.mainloop()
+    filename = current_value.get()
+    print("Filename is "+filename)
+    g = Game()
+    g.read_grid(filename)
+    g.set_hor_ver_pos_in_grid()
+    if grid_size >7:
+        grid_width = 36*grid_size
+    else:
+        grid_width = 8*36
     print_grid(g.grid)
     # Call recurse with dummy values so I don't have to calculate them here
     recurse(g, -1, -1, -1, -1)
@@ -442,69 +557,72 @@ def start_game():
 
 
 def design_game():
-    def colorflip(x, y):
-        global root, grid, g
-        if g[x][y] == "0":
-            g[x][y] = "#"
+    def colorflip(x, y, gg):
+        global root, grid
+        if gg[x][y] == "0":
+            gg[x][y] = "#"
             bgcol = "black"
             fgcol = "white"
         else:
-            g[x][y] = "0"
+            gg[x][y] = "0"
             fgcol = "black"
             bgcol = "white"
         grid[x][y].configure(fg=fgcol, bg=bgcol)
 
-    global root, g, grid, grid_size_max
+    global root, grid, grid_size, grid_size_max, grid_width
     root.destroy()
     root = tk.Tk()
     root.title("Design a Fill-Number Game")
     grid_width = 400
-    grid_height = 400
-    root.geometry(str(grid_width) + "x" + str(grid_height))
+    root.geometry(str(grid_width) + "x" + str(grid_width))
     label = tk.Label(root, anchor="center", text="Enter the game size").place(relx=0.5, rely=0.25, anchor="center")
     current_value = tk.StringVar()
     spin = tk.Spinbox(root, from_=3, to=grid_size_max, textvariable=current_value).place(relx=0.5, rely=0.5, anchor="center")
+    # Note: below I had "destroy" changed for "quit" and the image buttons stopped working!
     tk.Button(root, text="OK", command=lambda: root.destroy()).place(relx=0.2, rely=0.8, anchor="w")
     tk.Button(root, text="Exit", command=lambda: exit()).place(relx=0.8, rely=0.8, anchor="e")
     root.mainloop()
     grid_size = int(current_value.get())
+    if grid_size >7:
+        grid_width = 36*grid_size
+    else:
+        grid_width = 8*36
 
     # Now display a grid of the required size made with buttons
     root=tk.Tk()
-    btn_ok = tk.PhotoImage(file="Button_OK_30.png")
-    btn_cancel = tk.PhotoImage(file="Button_Cancel_30.png")
     root.title("Click on the cells to flip its color")
-    root.geometry(str(grid_width) + "x" + str(grid_height))
+    root.geometry(str(grid_width) + "x" + str(grid_width+40))
     fgcol = "black"
     bgcol = "white"
     # "g" is the numbers in the grid, and the grid is initially all numbers
-    g = [ [ "0" for x in range(grid_size)] for y in range(grid_size)]
-    grid = [ [ tk.Button(root, text="   ", fg=fgcol, bg=bgcol, command=lambda i=y, j=x: colorflip(i, j)) for x in range(grid_size)] for y in range(grid_size)]
+    gg = [ [ "0" for x in range(grid_size)] for y in range(grid_size)]
+    grid = [ [ tk.Button(root, text="   ", fg=fgcol, bg=bgcol, command=lambda i=y, j=x: colorflip(i, j, gg)) for x in range(grid_size)] for y in range(grid_size)]
     # Now that the grid has been created, modify its elements to add a command to flip its color
     for x in range(grid_size):
         for y in range(grid_size):
             grid[x][y].grid(row=x, column=y, padx=0, pady=0)
-            # grid[i][j].configure(command=lambda: colorflip(i, j))
     # And add buttons for OK/Cancel at the bottom
-
-    tk.Button(root, image=btn_ok, command=lambda: root.destroy()).grid(row=grid_size+1, column=0, padx=0, pady=0)
+    btn_ok = tk.PhotoImage(file="Button_OK_30.png")
+    btn_cancel = tk.PhotoImage(file="Button_Cancel_30.png")
+    tk.Button(root, image=btn_ok, command=lambda: root.quit()).grid(row=grid_size+1, column=0, padx=0, pady=0)
     tk.Button(root, image=btn_cancel, command=lambda: exit()).grid(row=grid_size+1, column=grid_size-1, padx=0, pady=0)
     root.mainloop()
     for i in range(grid_size):
-        print(g[i])
+        print(gg[i])
     # Now use "g" to transform "grid" into a grid of cells
+    game = Game()
+    game.create_grid(gg)
+    game.set_hor_ver_pos_in_grid()
+    if dbg: print("Grid size = " + str(grid_size))
+    generate_number_list(game)
 
-    
-
-grid_width = 400
-grid_height = 400
-filename="Numbers.txt"
+filename=""
+grid_width=500
 if len(sys.argv) > 1:
     filename=sys.argv[1]
-
 root = tk.Tk()
 root.title("Fill-Number Game")
-root.geometry(str(grid_width)+"x"+str(grid_height))
+root.geometry(str(grid_width)+"x"+str(grid_width+40))
 label = tk.Label(root, anchor="center", text="What do you want to do?").place(relx=0.5, rely=0.3, anchor="center")
 tk.Button(root, text="Play", command=lambda: start_game()).place(relx=0.1, rely=0.8, anchor="w")
 tk.Button(root, text="Design a game", command=lambda: design_game()).place(relx=0.5, rely=0.8, anchor="center")
@@ -512,13 +630,13 @@ tk.Button(root, text="Exit", command=lambda: exit()).place(relx=0.9, rely=0.8, a
 root.mainloop()
 
 root=tk.Tk()
-root.geometry(str(grid_width)+"x"+str(grid_height))
+root.geometry(str(grid_width)+"x"+str(grid_width))
 if number_of_solutions == 0:
     label = tk.Label(root, text="Found no solution after "+str(count)+" iterations")
 elif number_of_solutions == 1:
     label = tk.Label(root, text="Only 1 solution can be found after "+str(count)+" iterations")
 else:
-    label = tk.Label(root, str(number_of_solutions)+" found after "+str(count)+" iterations")
+    label = tk.Label(root, text=str(number_of_solutions)+" solutions found after "+str(count)+" iterations")
 label.place(relx=0.5, rely=0.3, anchor="center")
 tk.Button(root, text="Close all", command=lambda: exit()).place(relx=0.5, rely=0.7, anchor="center")
 tk.mainloop()
