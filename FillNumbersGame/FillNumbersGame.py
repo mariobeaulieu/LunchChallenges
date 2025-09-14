@@ -1,8 +1,6 @@
 #!/usr/bin/python3
 import os
-import sys
 import tkinter as tk
-from tkinter import ttk
 from random import random
 
 dbg=True
@@ -10,13 +8,12 @@ maxNum = 0
 count = 0
 step_mode = True
 number_of_solutions = 0
-root = ""
+value = ""
 grid = [[]]
 grid_size=0
-grid_size_max=15
-grid_width = 400
+designed = False
 
-def print_grid(grid_of_cells, pause=False, solution=False):
+def print_grid(game, pause=False, solution=False):
     global count, step_mode, root, number_of_solutions, grid_size, grid_width
     count += 1
     if pause or step_mode:
@@ -26,26 +23,90 @@ def print_grid(grid_of_cells, pause=False, solution=False):
             root.title("Solution #"+str(number_of_solutions)+" found after "+str(count)+" attempts")
         else:
             root.title("Fill Numbers Game - "+str(count))
-        root.geometry(str(grid_width)+"x"+str(grid_width+30))
+        grid_width = grid_size*38
+        grid_height = (grid_size+1)*38
+        padding = 0
+        if grid_width < 380:
+            # If grid is too narrow, the title doesn't display correctly
+            grid_width = 380
+            # padding is to add some room to the left to center the grid
+            padding=((10-grid_size)*19, 0)
+        middle = (grid_size-2)//2
+        span=2
+        if grid_size % 2 == 1:
+            span=3
+        root.geometry(str(grid_width)+"x"+str(grid_height))
 
         for i in range(grid_size):
+            # paddingvalue is not 0 only for the first column
+            paddingvalue=padding
             for j in range(grid_size):
                 tx = " "
-                if grid_of_cells[i][j].contains_number:
+                if game.grid[i][j].contains_number:
                     fgcol = "black"
                     bgcol = "white"
-                    if grid_of_cells[i][j].value != -1:
-                        tx = grid_of_cells[i][j].value
+                    if game.grid[i][j].value != -1:
+                        tx = game.grid[i][j].value
                 else:
                     fgcol = "white"
                     bgcol = "black"
-                tk.Button(root, text=tx, fg=fgcol, bg=bgcol).grid(row=i, column=j, padx=0, pady=0)
+                tk.Button(root, text=tx, fg=fgcol, bg=bgcol).grid(row=i, column=j, padx=paddingvalue, pady=0)
+                paddingvalue = 0
         fgcol = "black"
         bgcol = "white"
-        tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).place(x=10, y=grid_width+10, anchor="w")
-        tk.Button(root, text="Continue to solution", fg=fgcol, bg=bgcol, command=continue_to_solution).place(x=grid_width/2, y=grid_width+10,anchor="center")
-        tk.Button(root, text="Stop", fg=fgcol, bg=bgcol, command=lambda: exit()).place(x=grid_width-10,y=grid_width+10,anchor="e")
+        tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).grid(row=grid_size+1, column=0, columnspan=2, padx=padding, pady=0)
+        tk.Button(root, text="Solution", fg=fgcol, bg=bgcol, command=continue_to_solution).grid(row=grid_size+1, column=middle, columnspan=span, padx=0, pady=0)
+        tk.Button(root, text="Stop", fg=fgcol, bg=bgcol, command=lambda: exit()).grid(row=grid_size+1,column=grid_size-2, columnspan=2, padx=0, pady=0)
         root.mainloop()
+
+def save_grid(game):
+    global root, value
+    def get_textinput():
+        global value
+        value = textBox.get("1.0", "end-1c")
+        root.quit()
+
+    value = ""
+    root.destroy()
+    root = tk.Tk()
+    root.geometry("300x200")
+    root.title("Save problem")
+    tk.Label(root, text="Enter a name for the problem you want to save").place(relx=0.5, rely=0.3, anchor="center")
+    textBox = tk.Text(root, height=1, width=20)
+    textBox.place(relx=0.5, rely=0.6, anchor="center")
+    tk.Button(root, text="OK", command=lambda: get_textinput()).place(relx=0.1, rely=0.9, anchor="w")
+    tk.Button(root, text="Cancel", command=lambda: root.quit()).place(relx=0.9, rely=0.9, anchor="e")
+    root.mainloop()
+    root.destroy()
+
+    filename = value
+    if filename[-4:] != ".txt": filename += ".txt"
+
+    if dbg: print("Filename is <"+filename+">")
+    if len(filename) > 0:
+        with open(filename, mode="w") as f:
+            # Save the grid first
+            for row in range(grid_size):
+                line=""
+                for col in range(grid_size):
+                    if game.grid[row][col].contains_number:
+                        line += "0"
+                    else:
+                        line += "#"
+                f.write(line+"\n")
+            # Now the numbers
+            for ll in range(grid_size+1):
+                nb = len(game.num_list[ll])
+                if nb > 0:
+                    for i in range(nb):
+                        f.write(game.num_list[ll][i]+"\n")
+        root = tk.Tk()
+        root.geometry("300x200")
+        root.title("Save problem")
+        tk.Label(root, text="File "+filename+" has been created").place(relx=0.5, rely=0.3, anchor="center")
+        tk.Button(root, text="OK", command=lambda: root.quit()).place(relx=0.5, rely=0.6, anchor="center")
+        root.mainloop()
+        root.destroy()
 
 def step_program():
     global step_mode, root
@@ -188,7 +249,7 @@ class Game:
         length = len(line)
         grid_size = length
         self.grid = [[Cell() for i in range(grid_size)] for j in range(grid_size)]
-        self.num_list = [[] for i in range(grid_size)]
+        self.num_list = [[] for i in range(grid_size+1)]
         while length > 0:
             # The grid is the first thing in the file
             # The grid is assumed to be square
@@ -368,9 +429,10 @@ class Game:
     # Generate the list of start positions of numbers in the grid
     def get_start_positions(self):
         # Reset the list of start positions
-        self.start_positions = [[], [], [], [], [], [], [], [], [], [], [], [], []]
-        for i in range(0, grid_size):
-            for j in range(0, grid_size):
+        maxlenght=0
+        self.start_positions = [[] for i in range(grid_size+1)]
+        for i in range(grid_size):
+            for j in range(grid_size):
                 ll = self.grid[i][j].hor_num_length
                 if self.grid[i][j].hor_pos == 0 and self.grid[i][j].num_known_h < ll:
                     self.start_positions[ll].append(Start_cell(i,j,True))
@@ -421,13 +483,13 @@ def recurse(g, row, col, hor, value, silent=False):
         g.write_number(row, col, hor, value)
         print("Number "+str(value)+" is being written at position "+str(row)+":"+str(col))
         if not silent:
-            print_grid(g.grid)
+            print_grid(g)
 
     g.get_start_positions()
     if len(g.start_pos_order) == 0:
         print("All numbers have been placed!")
         if not silent or dbg:
-            print_grid(g.grid, True, True)
+            print_grid(g, True, True)
         # Return False so if we're looking for another solution, we'll continue assuming that that last value did't work
         return False
     else:
@@ -513,7 +575,7 @@ def generate_number_list(gg):
         print("List of numbers:")
         for ll in range(len(gg.num_list)):
             print (ll, gg.num_list[ll])
-    print_grid(gg.grid)
+    print_grid(gg)
 
     # Erase the grid and call recurse to find how many solutions exist
     for row in range(grid_size):
@@ -526,7 +588,7 @@ def generate_number_list(gg):
     recurse(gg, -1, -1, -1, -1, silent)
 
 def start_game():
-    global grid_size, grid_width
+    global grid_size, grid_width, original_game
     root = tk.Tk()
     root.title("Solve a Fill-Number Game")
     grid_width = 400
@@ -543,16 +605,16 @@ def start_game():
     root.mainloop()
     filename = current_value.get()
     print("Filename is "+filename)
-    g = Game()
-    g.read_grid(filename)
-    g.set_hor_ver_pos_in_grid()
+    original_game = Game()
+    original_game.read_grid(filename)
+    original_game.set_hor_ver_pos_in_grid()
     if grid_size >7:
         grid_width = 36*grid_size
     else:
         grid_width = 8*36
-    print_grid(g.grid)
+    print_grid(original_game)
     # Call recurse with dummy values so I don't have to calculate them here
-    recurse(g, -1, -1, -1, -1)
+    recurse(original_game, -1, -1, -1, -1)
     print("After the original recurse")
 
 
@@ -569,29 +631,37 @@ def design_game():
             bgcol = "white"
         grid[x][y].configure(fg=fgcol, bg=bgcol)
 
-    global root, grid, grid_size, grid_size_max, grid_width
+    global root, grid, grid_size, grid_size_max, grid_width, original_game, designed
+    min_game_size=6
+    max_game_size=20
+    designed = True
     root.destroy()
     root = tk.Tk()
     root.title("Design a Fill-Number Game")
-    grid_width = 400
-    root.geometry(str(grid_width) + "x" + str(grid_width))
+
+    root.geometry("250x200")
     label = tk.Label(root, anchor="center", text="Enter the game size").place(relx=0.5, rely=0.25, anchor="center")
     current_value = tk.StringVar()
-    spin = tk.Spinbox(root, from_=3, to=grid_size_max, textvariable=current_value).place(relx=0.5, rely=0.5, anchor="center")
+    spin = tk.Spinbox(root, from_=min_game_size, to=max_game_size, textvariable=current_value).place(relx=0.5, rely=0.5, anchor="center")
     # Note: below I had "destroy" changed for "quit" and the image buttons stopped working!
     tk.Button(root, text="OK", command=lambda: root.destroy()).place(relx=0.2, rely=0.8, anchor="w")
     tk.Button(root, text="Exit", command=lambda: exit()).place(relx=0.8, rely=0.8, anchor="e")
     root.mainloop()
     grid_size = int(current_value.get())
-    if grid_size >7:
-        grid_width = 36*grid_size
-    else:
-        grid_width = 8*36
+
+    grid_width = grid_size * 38
+    grid_height = (grid_size + 1) * 38
+    padding = 0
+    if grid_width < 380:
+        # If grid is too narrow, the title doesn't display correctly
+        grid_width = 380
+        # padding is to add some room to the left to center the grid
+        padding = ((10 - grid_size) * 19, 0)
 
     # Now display a grid of the required size made with buttons
     root=tk.Tk()
-    root.title("Click on the cells to flip its color")
-    root.geometry(str(grid_width) + "x" + str(grid_width+40))
+    root.title("Click on a cell to flip its color")
+    root.geometry(str(grid_width) + "x" + str(grid_height))
     fgcol = "black"
     bgcol = "white"
     # "g" is the numbers in the grid, and the grid is initially all numbers
@@ -599,44 +669,59 @@ def design_game():
     grid = [ [ tk.Button(root, text="   ", fg=fgcol, bg=bgcol, command=lambda i=y, j=x: colorflip(i, j, gg)) for x in range(grid_size)] for y in range(grid_size)]
     # Now that the grid has been created, modify its elements to add a command to flip its color
     for x in range(grid_size):
+        paddingvalue = padding
         for y in range(grid_size):
-            grid[x][y].grid(row=x, column=y, padx=0, pady=0)
+            grid[x][y].grid(row=x, column=y, padx=paddingvalue, pady=0)
+            paddingvalue = 0
     # And add buttons for OK/Cancel at the bottom
     btn_ok = tk.PhotoImage(file="Button_OK_30.png")
     btn_cancel = tk.PhotoImage(file="Button_Cancel_30.png")
-    tk.Button(root, image=btn_ok, command=lambda: root.quit()).grid(row=grid_size+1, column=0, padx=0, pady=0)
+    tk.Button(root, image=btn_ok, command=lambda: root.quit()).grid(row=grid_size+1, column=0, padx=padding, pady=0)
     tk.Button(root, image=btn_cancel, command=lambda: exit()).grid(row=grid_size+1, column=grid_size-1, padx=0, pady=0)
     root.mainloop()
     for i in range(grid_size):
         print(gg[i])
     # Now use "g" to transform "grid" into a grid of cells
-    game = Game()
-    game.create_grid(gg)
-    game.set_hor_ver_pos_in_grid()
+    original_game = Game()
+    original_game.create_grid(gg)
+    original_game.set_hor_ver_pos_in_grid()
     if dbg: print("Grid size = " + str(grid_size))
-    generate_number_list(game)
+    generate_number_list(original_game)
+    if dbg:
+        print(original_game.num_list)
 
-filename=""
-grid_width=500
-if len(sys.argv) > 1:
-    filename=sys.argv[1]
+##################################################
+##          This is the main routine            ##
+##################################################
+original_game = Game()
+
 root = tk.Tk()
 root.title("Fill-Number Game")
-root.geometry(str(grid_width)+"x"+str(grid_width+40))
-label = tk.Label(root, anchor="center", text="What do you want to do?").place(relx=0.5, rely=0.3, anchor="center")
+root.geometry("300x200")
+tk.Label(root, anchor="center", text="What do you want to do?").place(relx=0.5, rely=0.3, anchor="center")
 tk.Button(root, text="Play", command=lambda: start_game()).place(relx=0.1, rely=0.8, anchor="w")
 tk.Button(root, text="Design a game", command=lambda: design_game()).place(relx=0.5, rely=0.8, anchor="center")
 tk.Button(root, text="Exit", command=lambda: exit()).place(relx=0.9, rely=0.8, anchor="e")
 root.mainloop()
+root.quit()
 
+fgcol = "black"
+bgcol = "white"
 root=tk.Tk()
-root.geometry(str(grid_width)+"x"+str(grid_width))
-if number_of_solutions == 0:
-    label = tk.Label(root, text="Found no solution after "+str(count)+" iterations")
-elif number_of_solutions == 1:
-    label = tk.Label(root, text="Only 1 solution can be found after "+str(count)+" iterations")
+root.geometry("300x200")
+# root.geometry(str(grid_width)+"x"+str(grid_width))
+if designed and number_of_solutions == 1:
+    label = tk.Label(root, text="1 solution found after " + str(count) + " iterations\nDo you want to save that game?")
+    tk.Button(root, text="Save", fg=fgcol, bg=bgcol, command=lambda x=original_game: save_grid(x)).place(relx=0.1, rely=0.8, anchor="w")
+    tk.Button(root, text="Stop", fg=fgcol, bg=bgcol, command=lambda: exit()).place(relx=0.9, rely=0.8, anchor="e")
 else:
-    label = tk.Label(root, text=str(number_of_solutions)+" solutions found after "+str(count)+" iterations")
+    if number_of_solutions == 0:
+        label = tk.Label(root, text="Found no solution after " + str(count) + " iterations")
+    elif number_of_solutions == 1:
+        label = tk.Label(root, text="1 solution found after " + str(count) + " iterations")
+    else:
+        label = tk.Label(root, text=str(number_of_solutions)+" solutions found after "+str(count)+" iterations")
+    tk.Button(root, text="Close all", fg=fgcol, bg=bgcol, command=lambda: exit()).place(relx=0.5, rely=0.8, anchor="center")
+# Labels are placed the same whatever the case, but buttons are different if "Save" is there
 label.place(relx=0.5, rely=0.3, anchor="center")
-tk.Button(root, text="Close all", command=lambda: exit()).place(relx=0.5, rely=0.7, anchor="center")
 tk.mainloop()
