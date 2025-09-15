@@ -14,17 +14,19 @@ grid_size=0
 designed = False
 
 def print_grid(game, pause=False, solution=False):
-    global count, step_mode, root, number_of_solutions, grid_size, grid_width
+    global count, step_mode, root, number_of_solutions, grid_size
     count += 1
     if pause or step_mode:
         root = tk.Tk()
         if solution:
             number_of_solutions += 1
             root.title("Solution #"+str(number_of_solutions)+" found after "+str(count)+" attempts")
+            solve_text="Again"
         else:
             root.title("Fill Numbers Game - "+str(count))
+            solve_text="Solve it"
         grid_width = grid_size*38
-        grid_height = (grid_size+1)*38
+        grid_height = (grid_size+1)*33
         padding = 0
         if grid_width < 380:
             # If grid is too narrow, the title doesn't display correctly
@@ -55,8 +57,8 @@ def print_grid(game, pause=False, solution=False):
         fgcol = "black"
         bgcol = "white"
         tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).grid(row=grid_size+1, column=0, columnspan=2, padx=padding, pady=0)
-        tk.Button(root, text="Solution", fg=fgcol, bg=bgcol, command=continue_to_solution).grid(row=grid_size+1, column=middle, columnspan=span, padx=0, pady=0)
-        tk.Button(root, text="Stop", fg=fgcol, bg=bgcol, command=lambda: exit()).grid(row=grid_size+1,column=grid_size-2, columnspan=2, padx=0, pady=0)
+        tk.Button(root, text=solve_text, fg=fgcol, bg=bgcol, command=continue_to_solution).grid(row=grid_size+1, column=middle, columnspan=span, padx=0, pady=0)
+        tk.Button(root, text="Exit", fg=fgcol, bg=bgcol, command=lambda: exit()).grid(row=grid_size+1,column=grid_size-2, columnspan=2, padx=0, pady=0)
         root.mainloop()
 
 def save_grid(game):
@@ -589,17 +591,21 @@ def generate_number_list(gg):
 
 def start_game():
     global grid_size, grid_width, original_game
+    import tkinter as tk
+
     root = tk.Tk()
     root.title("Solve a Fill-Number Game")
     grid_width = 400
     root.geometry(str(grid_width) + "x" + str(grid_width))
-    label = tk.Label(root, anchor="center", text="Enter the name of the file").place(relx=0.5, rely=0.25, anchor="center")
+    label = tk.Label(root, anchor="center", text="Select a file").place(relx=0.5, rely=0.25, anchor="center")
     filelist = [ i for i in os.listdir() if ".txt" in i ]
+    filelist.sort()
     if dbg:
         print(filelist)
-    current_value = tk.StringVar()
-    current_value.set(set(filelist[0]))
-    tk.OptionMenu(root, current_value, *filelist).place(relx=0.5, rely=0.5, anchor="center", relwidth=0.8)
+    current_value = tk.StringVar(root)
+    current_value.set("Select a file")
+    drop = tk.OptionMenu(root, current_value,*filelist)
+    drop.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.8)
     tk.Button(root, text="OK", command=lambda: root.quit()).place(relx=0.2, rely=0.8, anchor="w")
     tk.Button(root, text="Exit", command=lambda: exit()).place(relx=0.8, rely=0.8, anchor="e")
     root.mainloop()
