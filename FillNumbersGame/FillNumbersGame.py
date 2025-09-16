@@ -26,19 +26,21 @@ def print_grid(game, pause=False, solution=False):
             root.title("Fill Numbers Game - "+str(count))
             solve_text="Solve it"
         grid_width = grid_size*38
-        grid_height = (grid_size+1)*33
         padding = 0
-        if grid_width < 380:
+        firstcol=0
+        if grid_width < 400:
             # If grid is too narrow, the title doesn't display correctly
-            grid_width = 380
+            grid_width = 400
             # padding is to add some room to the left to center the grid
-            padding=((10-grid_size)*19, 0)
+            padding=0 #((10-grid_size)*19, 0)
+            firstcol=4
         middle = (grid_size-2)//2
         span=2
         if grid_size % 2 == 1:
             span=3
-        root.geometry(str(grid_width)+"x"+str(grid_height))
 
+        for i in range(1, firstcol):
+            tk.Label(root, text="  ", font="courier").grid(row=0, column=i-1)
         for i in range(grid_size):
             # paddingvalue is not 0 only for the first column
             paddingvalue=padding
@@ -52,13 +54,38 @@ def print_grid(game, pause=False, solution=False):
                 else:
                     fgcol = "white"
                     bgcol = "black"
-                tk.Button(root, text=tx, fg=fgcol, bg=bgcol).grid(row=i, column=j, padx=paddingvalue, pady=0)
+                tk.Button(root, text=tx, fg=fgcol, bg=bgcol).grid(row=i, column=j+firstcol, padx=paddingvalue, pady=0)
                 paddingvalue = 0
         fgcol = "black"
         bgcol = "white"
-        tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).grid(row=grid_size+1, column=0, columnspan=2, padx=padding, pady=0)
-        tk.Button(root, text=solve_text, fg=fgcol, bg=bgcol, command=continue_to_solution).grid(row=grid_size+1, column=middle, columnspan=span, padx=0, pady=0)
-        tk.Button(root, text="Exit", fg=fgcol, bg=bgcol, command=lambda: exit()).grid(row=grid_size+1,column=grid_size-2, columnspan=2, padx=0, pady=0)
+
+        # Add the list of numbers to use at the bottom of the grid
+        # Create a list of all numbers with headers for the length of following numbers
+        long_list=[]
+        for i in range(len(game.num_list)):
+            if len(game.num_list[i]) > 0:
+                long_list += [str(i)+"-digit numbers"] + game.num_list[i]
+        # Is all numbers have been placed, then skip that part
+        rowspan=0
+        colspan=0
+        if len(long_list) > 0:
+            # Numbers are shown as 4 columns
+            numcol = 4
+            num_per_col = (len(long_list)+numcol-1)//numcol
+            # Split the long_list in "numcol" columns
+            cols = ["" for i in range(numcol)]
+            for i in range(len(long_list)):
+                cols[i//num_per_col] += long_list[i] + "\n"
+            rowspan=num_per_col//2
+            colspan=(grid_size+2*firstcol+numcol-1)//numcol
+            for i in range(numcol):
+                tk.Label(root, text=cols[i]).grid(row=grid_size+1, rowspan=rowspan, column=i*colspan, columnspan=colspan)
+        grid_height = (grid_size+rowspan+2)*33
+        root.geometry(str(grid_width)+"x"+str(grid_height))
+        root.update()
+        tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).grid(row=grid_size+rowspan+2, column=firstcol, columnspan=2, padx=padding, pady=0)
+        tk.Button(root, text=solve_text, fg=fgcol, bg=bgcol, command=continue_to_solution).grid(row=grid_size+rowspan+2, column=middle+firstcol, columnspan=span, padx=0, pady=0)
+        tk.Button(root, text="Exit", fg=fgcol, bg=bgcol, command=lambda: exit()).grid(row=grid_size+rowspan+2,column=grid_size+firstcol-2, columnspan=2, padx=0, pady=0)
         root.mainloop()
 
 def save_grid(game):
