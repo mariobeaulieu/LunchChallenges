@@ -80,13 +80,105 @@ def print_grid(game, pause=False, solution=False):
             colspan=(grid_size+2*firstcol+numcol-1)//numcol
             for i in range(numcol):
                 tk.Label(root, text=cols[i]).grid(row=grid_size+1, rowspan=rowspan, column=i*colspan, columnspan=colspan)
-        grid_height = (grid_size+rowspan+2)*33
+        grid_height = (grid_size+rowspan+2)*34
         root.geometry(str(grid_width)+"x"+str(grid_height))
-        root.update()
         tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).grid(row=grid_size+rowspan+2, column=firstcol, columnspan=2, padx=padding, pady=0)
         tk.Button(root, text=solve_text, fg=fgcol, bg=bgcol, command=continue_to_solution).grid(row=grid_size+rowspan+2, column=middle+firstcol, columnspan=span, padx=0, pady=0)
         tk.Button(root, text="Exit", fg=fgcol, bg=bgcol, command=lambda: exit()).grid(row=grid_size+rowspan+2,column=grid_size+firstcol-2, columnspan=2, padx=0, pady=0)
         root.mainloop()
+
+def get_file():
+    grid_width = 400
+    root = tk.Tk()
+    root.title("Read a Fill-In file")
+    root.geometry(str(grid_width) + "x" + str(grid_width))
+    label = tk.Label(root, anchor="center", text="Select a file").place(relx=0.5, rely=0.25, anchor="center")
+    filelist = [ i for i in os.listdir() if ".txt" in i ]
+    filelist.sort()
+    if dbg:
+        print(filelist)
+    current_value = tk.StringVar(root)
+    current_value.set("Select a file")
+    drop = tk.OptionMenu(root, current_value,*filelist)
+    drop.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.8)
+    tk.Button(root, text="OK", command=lambda: root.quit()).place(relx=0.2, rely=0.8, anchor="w")
+    tk.Button(root, text="Exit", command=lambda: exit()).place(relx=0.8, rely=0.8, anchor="e")
+    root.mainloop()
+    root.destroy()
+    filename = current_value.get()
+    print("Filename is "+filename)
+    g = Game()
+    g.filename = filename
+    g.read_grid(filename)
+    g.set_hor_ver_pos_in_grid()
+    return g
+
+def get_number_list(game):
+    long_list=[]
+    for i in range(len(game.num_list)):
+        if len(game.num_list[i]) > 0:
+            long_list += [str(i)+"-digit numbers"] + game.num_list[i]
+    if len(long_list) > 0:
+        # Numbers are shown as 4 columns
+        numcol = 4
+        num_per_col = (len(long_list)+numcol-1)//numcol
+        # Split the long_list in "numcol" columns
+        cols = ["" for i in range(numcol)]
+        for i in range(len(long_list)):
+            cols[i//num_per_col] += long_list[i] + "\n"
+    return cols
+
+def interactive_play():
+    def colorflip(x, y, game, grid):
+        global root
+        if game.grid[x][y] != "-1":
+            bgcol = "black"
+            fgcol = "white"
+        else:
+            fgcol = "black"
+            bgcol = "white"
+        grid[x][y].configure(fg=fgcol, bg=bgcol)
+
+    game = get_file()
+    root = tk.Tk()
+    root.title("Interactive Play")
+    grid_size = len(game.grid)
+    fgcol = "black"
+    bgcol = "white"
+    # Create the grid using buttons
+    # Size of buttons is calculated to fit grid_width
+    grid = [["" for i in range(grid_size)] for j in range(grid_size)]
+    for row in range(grid_size):
+        for col in range(grid_size):
+            if game.grid[row][col].contains_number:
+                fgcol = "black"
+                bgcol = "white"
+                text = "   "
+            else:
+                # fgcol = "white"
+                bgcol = "black"
+                text = "___"
+            grid[row][col] = tk.Button(root, text=text, fg=fgcol, bg=bgcol, font=('Courier', 14))
+            grid[row][col].grid(row=row, column=col)
+            grid[row][col].configure(command=lambda i=row, j=col: colorflip(i, j, game, grid))
+        bgcol = "white"
+        fgcol = "black"
+    # Add the list of numbers to use at the bottom of the grid
+    # Create a list of all numbers with headers for the length of following numbers
+    cols = get_number_list(game)
+    numcol=4
+    rowspan=(len(cols[0])+1)//2
+    colspan=grid_size//numcol
+    if colspan < 2:
+        colspan = 2
+    for i in range(numcol):
+        tk.Label(root, text=cols[i]).grid(row=grid_size+1, rowspan=rowspan, column=i*colspan, columnspan=colspan)
+    # grid_height = (grid_size+rowspan+2)*34
+    # root.geometry(str(grid_width)+"x"+str(grid_height))
+    # tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).grid(row=grid_size+rowspan+2, column=firstcol, columnspan=2, padx=padding, pady=0)
+    # tk.Button(root, text=solve_text, fg=fgcol, bg=bgcol, command=continue_to_solution).grid(row=grid_size+rowspan+2, column=middle+firstcol, columnspan=span, padx=0, pady=0)
+    # tk.Button(root, text="Exit", fg=fgcol, bg=bgcol, command=lambda: exit()).grid(row=grid_size+rowspan+2,column=grid_size+firstcol-2, columnspan=2, padx=0, pady=0)
+    root.mainloop()
 
 def save_grid(game):
     global root, value
@@ -202,6 +294,7 @@ class Game:
         global dbg, grid_size
         # Grid is up to grid_size x grid_size
         # It comprises grid_size lines, and each line is a list of cells
+        self.filename = ""
         self.grid = []
         self.num_list = []
         # start_positions is the list of x-y coordinates where a horizontal or vertical number starts
@@ -495,6 +588,7 @@ class Game:
                             direct="vertical"
                         print("["+str(self.start_positions[i][j].row)+","+str(self.start_positions[i][j].col)+"]->"+str(direct))
 
+
 def recurse(g, row, col, hor, value, silent=False):
     # This function will select a position to write a number from the list
     # But writing a number makes it disappear from the list, so it needs first to copy the entire game so if the
@@ -620,27 +714,7 @@ def start_game():
     global grid_size, grid_width, original_game
     import tkinter as tk
 
-    root = tk.Tk()
-    root.title("Solve a Fill-Number Game")
-    grid_width = 400
-    root.geometry(str(grid_width) + "x" + str(grid_width))
-    label = tk.Label(root, anchor="center", text="Select a file").place(relx=0.5, rely=0.25, anchor="center")
-    filelist = [ i for i in os.listdir() if ".txt" in i ]
-    filelist.sort()
-    if dbg:
-        print(filelist)
-    current_value = tk.StringVar(root)
-    current_value.set("Select a file")
-    drop = tk.OptionMenu(root, current_value,*filelist)
-    drop.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.8)
-    tk.Button(root, text="OK", command=lambda: root.quit()).place(relx=0.2, rely=0.8, anchor="w")
-    tk.Button(root, text="Exit", command=lambda: exit()).place(relx=0.8, rely=0.8, anchor="e")
-    root.mainloop()
-    filename = current_value.get()
-    print("Filename is "+filename)
-    original_game = Game()
-    original_game.read_grid(filename)
-    original_game.set_hor_ver_pos_in_grid()
+    original_game = get_file()
     if grid_size >7:
         grid_width = 36*grid_size
     else:
@@ -730,10 +804,11 @@ original_game = Game()
 
 root = tk.Tk()
 root.title("Fill-Number Game")
-root.geometry("300x200")
+root.geometry("400x200")
 tk.Label(root, anchor="center", text="What do you want to do?").place(relx=0.5, rely=0.3, anchor="center")
-tk.Button(root, text="Play", command=lambda: start_game()).place(relx=0.1, rely=0.8, anchor="w")
-tk.Button(root, text="Design a game", command=lambda: design_game()).place(relx=0.5, rely=0.8, anchor="center")
+tk.Button(root, text="Solve", command=lambda: start_game()).place(relx=0.1, rely=0.8, anchor="w")
+tk.Button(root, text="Play", command=lambda: interactive_play()).place(relx=0.3, rely=0.8, anchor="w")
+tk.Button(root, text="Design a game", command=lambda: design_game()).place(relx=0.6, rely=0.8, anchor="center")
 tk.Button(root, text="Exit", command=lambda: exit()).place(relx=0.9, rely=0.8, anchor="e")
 root.mainloop()
 root.quit()
