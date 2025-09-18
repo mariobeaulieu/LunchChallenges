@@ -12,6 +12,8 @@ value = ""
 grid = [[]]
 grid_size=0
 designed = False
+numcol = 4
+
 
 def print_grid(game, pause=False, solution=False):
     global count, step_mode, root, number_of_solutions, grid_size
@@ -70,7 +72,6 @@ def print_grid(game, pause=False, solution=False):
         colspan=0
         if len(long_list) > 0:
             # Numbers are shown as 4 columns
-            numcol = 4
             num_per_col = (len(long_list)+numcol-1)//numcol
             # Split the long_list in "numcol" columns
             cols = ["" for i in range(numcol)]
@@ -120,7 +121,6 @@ def get_number_list(game):
             long_list += [str(i)+"-digit numbers"] + game.num_list[i]
     if len(long_list) > 0:
         # Numbers are shown as 4 columns
-        numcol = 4
         num_per_col = (len(long_list)+numcol-1)//numcol
         # Split the long_list in "numcol" columns
         cols = ["" for i in range(numcol)]
@@ -129,8 +129,28 @@ def get_number_list(game):
     return cols
 
 def interactive_play():
-    def colorflip(x, y, game, grid):
-        global root
+    def set_value(x, y, game, grid, labels_of_numbers):
+        def setval(v, x, y, game, grid, labels_of_numbers):
+            keypadroot.destroy()
+            print(x, y, v)
+            if v==-1:
+                game.set_cell_value(x, y, v)
+                text="   "
+            else:
+                game.set_cell_value(x, y, str(v))
+                text=" "+str(v)+" "
+            grid[x][y].configure(text=text)
+            cols = get_number_list(game)
+            for i in range(numcol):
+                labels_of_numbers[i].configure(text=cols[i])
+        keypadroot=tk.Tk()
+        keypadroot.title("Click value")
+        for i in range(1,10):
+            tk.Button(keypadroot, text=str(i), command=lambda v=i: setval(v, x, y, game, grid, labels_of_numbers)).grid(row=(i-1)//3, column=(i-1)%3)
+        tk.Button(keypadroot, text="0", command=lambda: setval(0, x, y, game, grid, labels_of_numbers)).grid(row=3, column=0)
+        tk.Button(keypadroot, text="DEL", command=lambda: setval(-1, x, y, game, grid, labels_of_numbers)).grid(row=3, column=1, columnspan=2)
+        keypadroot.mainloop()
+
         if game.grid[x][y] != "-1":
             bgcol = "black"
             fgcol = "white"
@@ -139,10 +159,18 @@ def interactive_play():
             bgcol = "white"
         grid[x][y].configure(fg=fgcol, bg=bgcol)
 
+    ###########################################
+    # This is the beginning of interactive_play
+    ###########################################
+    # First, get a problem to play from a file
     game = get_file()
+    # Keep a copy of the original list of numbers
+    list_of_numbers = game.copy_num_list()
+    # Then draw the screen as arrows of buttons that call back set_value defined above
     root = tk.Tk()
     root.title("Interactive Play")
     grid_size = len(game.grid)
+    labels_of_numbers=[tk.Label(root) for i in range(numcol)]
     fgcol = "black"
     bgcol = "white"
     # Create the grid using buttons
@@ -160,24 +188,20 @@ def interactive_play():
                 text = "___"
             grid[row][col] = tk.Button(root, text=text, fg=fgcol, bg=bgcol, font=('Courier', 14))
             grid[row][col].grid(row=row, column=col)
-            grid[row][col].configure(command=lambda i=row, j=col: colorflip(i, j, game, grid))
+            # Configure the callback for cells that contain values
+            if game.grid[row][col].contains_number:
+                grid[row][col].configure(command=lambda i=row, j=col: set_value(i, j, game, grid, labels_of_numbers))
         bgcol = "white"
         fgcol = "black"
-    # Add the list of numbers to use at the bottom of the grid
-    # Create a list of all numbers with headers for the length of following numbers
+    # Add labels containing the list of numbers to use at the bottom of the grid
     cols = get_number_list(game)
-    numcol=4
     rowspan=(len(cols[0])+1)//2
     colspan=grid_size//numcol
     if colspan < 2:
         colspan = 2
     for i in range(numcol):
-        tk.Label(root, text=cols[i]).grid(row=grid_size+1, rowspan=rowspan, column=i*colspan, columnspan=colspan)
-    # grid_height = (grid_size+rowspan+2)*34
-    # root.geometry(str(grid_width)+"x"+str(grid_height))
-    # tk.Button(root, text="Step", fg=fgcol, bg=bgcol, command=step_program).grid(row=grid_size+rowspan+2, column=firstcol, columnspan=2, padx=padding, pady=0)
-    # tk.Button(root, text=solve_text, fg=fgcol, bg=bgcol, command=continue_to_solution).grid(row=grid_size+rowspan+2, column=middle+firstcol, columnspan=span, padx=0, pady=0)
-    # tk.Button(root, text="Exit", fg=fgcol, bg=bgcol, command=lambda: exit()).grid(row=grid_size+rowspan+2,column=grid_size+firstcol-2, columnspan=2, padx=0, pady=0)
+        labels_of_numbers[i].configure(text=cols[i])
+        labels_of_numbers[i].grid(row=grid_size+1, rowspan=rowspan, column=i*colspan, columnspan=colspan)
     root.mainloop()
 
 def save_grid(game):
@@ -551,7 +575,6 @@ class Game:
     # Generate the list of start positions of numbers in the grid
     def get_start_positions(self):
         # Reset the list of start positions
-        maxlenght=0
         self.start_positions = [[] for i in range(grid_size+1)]
         for i in range(grid_size):
             for j in range(grid_size):
@@ -712,7 +735,6 @@ def generate_number_list(gg):
 
 def start_game():
     global grid_size, grid_width, original_game
-    import tkinter as tk
 
     original_game = get_file()
     if grid_size >7:
@@ -748,7 +770,7 @@ def design_game():
 
     root.geometry("250x200")
     label = tk.Label(root, anchor="center", text="Enter the game size").place(relx=0.5, rely=0.25, anchor="center")
-    current_value = tk.StringVar()
+    current_value = tk.StringVar(root)
     spin = tk.Spinbox(root, from_=min_game_size, to=max_game_size, textvariable=current_value).place(relx=0.5, rely=0.5, anchor="center")
     # Note: below I had "destroy" changed for "quit" and the image buttons stopped working!
     tk.Button(root, text="OK", command=lambda: root.destroy()).place(relx=0.2, rely=0.8, anchor="w")
