@@ -165,7 +165,7 @@ def interactive_play():
     # First, get a problem to play from a file
     game = get_file()
     # Keep a copy of the original list of numbers
-    list_of_numbers = game.copy_num_list()
+    list_of_numbers = copy_list_of_lists(game.num_list)
     # Then draw the screen as arrows of buttons that call back set_value defined above
     root = tk.Tk()
     root.title("Interactive Play")
@@ -203,6 +203,12 @@ def interactive_play():
         labels_of_numbers[i].configure(text=cols[i])
         labels_of_numbers[i].grid(row=grid_size+1, rowspan=rowspan, column=i*colspan, columnspan=colspan)
     root.mainloop()
+
+def copy_list_of_lists(mylist):
+    return [[mylist[i][j] for j in range(len(mylist[i]))] for i in range(len(mylist))]
+
+def copy_array_of_objects(mylist):
+    return [[mylist[i][j].copy() for j in range(len(mylist[i]))] for i in range(len(mylist))]
 
 def save_grid(game):
     global root, value
@@ -298,7 +304,6 @@ class Cell:
         self.hor_num_length = l
     def set_ver_num_length(self, l):
         self.ver_num_length = l
-
     def copy(self):
         c2 = Cell()
         c2.contains_number = self.contains_number
@@ -371,19 +376,15 @@ class Game:
                 for j in range(grid_size):
                     print("["+str(i)+":"+str(j)+"]: contains_number="+str(self.grid[i][j].contains_number)+", HorNumLen: "+str(self.grid[i][j].hor_num_length)+", HorPos: "+str(self.grid[i][j].hor_pos)+", VerNumLen: "+str(self.grid[i][j].ver_num_length)+", VerPos: "+str(self.grid[i][j].ver_pos))
 
-    def copy_grid(self):
+    def copy(self):
         global grid_size
-        grid_size = len(self.grid)
-        new_grid = [[self.grid[row][col].copy() for col in range(grid_size)] for row in range(grid_size)]
-        return new_grid
-
-    def copy_num_list(self):
-        ll = len(self.num_list)
-        nouveau_list = [[] for _ in range(ll)]
-        for i in range(len(self.num_list)):
-            for j in range(len(self.num_list[i])):
-                nouveau_list[i].append(self.num_list[i][j])
-        return nouveau_list
+        newgame = Game()
+        newgame.grid = copy_array_of_objects(self.grid)
+        newgame.filename = self.filename
+        newgame.num_list = copy_list_of_lists(self.num_list)
+        newgame.start_positions = copy_list_of_lists(self.start_positions)
+        newgame.start_pos_order = copy_list_of_lists(self.start_pos_order)
+        return newgame
 
     def read_grid(self, filename) -> bool:
         global grid_size
@@ -646,14 +647,11 @@ def recurse(g, row, col, hor, value, silent=False):
         hor = g.start_positions[number_size][0].horizontal
 
         # Save game features to restore them if writing the word didn't work
-        g2 = Game()
         for i in range(0, number_of_entries_of_that_size):
             # Write the number in the grid, and call the recursive loop to fit everything
             # if it eventually returns with False, it means that we should have tried
             # with the next value for
-            g2.num_list = g.copy_num_list()
-            g2.grid = g.copy_grid()
-            g2.get_start_positions()
+            g2 = g.copy()
             value = g2.num_list[number_size][i]
             word_ok = g2.check_write_number(row, col, hor, value)
             if word_ok:
@@ -839,7 +837,6 @@ fgcol = "black"
 bgcol = "white"
 root=tk.Tk()
 root.geometry("300x200")
-# root.geometry(str(grid_width)+"x"+str(grid_width))
 if designed and number_of_solutions == 1:
     label = tk.Label(root, text="1 solution found after " + str(count) + " iterations\nDo you want to save that game?")
     tk.Button(root, text="Save", fg=fgcol, bg=bgcol, command=lambda x=original_game: save_grid(x)).place(relx=0.1, rely=0.8, anchor="w")
