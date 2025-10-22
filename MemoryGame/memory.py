@@ -60,16 +60,24 @@ def main():
     size=getButtons("Select Game Size", ["2x4", "4x4", "4x6", "6x6", "6x8", "8x8"])
     lastdate="NEVER"
     lastaverage="N/A"
+    prev_ave = prev_count = 0
     try:
         with open( name.lower()+".dat", 'r') as file:
             print("File exists and is ready to read")
             for line in file:
                 line = line.strip()
                 data = line.split(":")
-                if len(data) == 3 and int(data[0]) == size:
+                # if len(data) is not 4, there's a problem with the file and we skip that line
+                if len(data) == 4 and int(data[0]) == size:
                     lastdate=data[1]
-                    lastaverage=data[2]
-        getButtons("Level last played on "+lastdate+" with average of "+lastaverage+" tries", "Continue")
+                    lastcount=data[2]
+                    lastaverage=data[3]
+        # If the player already played today, today's stats will be added
+        if lastdate == str(date.today()):
+            lastdate="TODAY"
+            prev_ave = float(lastaverage)
+            prev_count = int(lastcount)
+        getButtons("Level last played on " + lastdate + " with average of " + str((int(float(lastaverage)*100))/100) + " tries", "Continue")
     except FileNotFoundError:
         getButtons("Welcome "+name+" as a new user ", ["OK"])
 
@@ -156,9 +164,10 @@ def main():
                             ave=0
                             for v in stats:
                                 ave += v
-                            ave = ave/len(stats)
+                            nbGames = len(stats) + prev_count
+                            ave = (ave+prev_ave*prev_count)/nbGames
                             with open(name.lower() + ".dat", 'a') as file:
-                                file.write(str(size)+":"+ str(date.today())+":"+str(ave)+"\n")
+                                file.write(str(size)+":"+ str(date.today())+":"+str(nbGames)+":"+str(ave)+"\n")
 
                         else:
                             # Reset the board
