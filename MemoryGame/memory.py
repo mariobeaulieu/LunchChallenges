@@ -59,7 +59,7 @@ def main():
     stats=[]
     size=getButtons("Select Game Size", ["2x4", "4x4", "4x6", "6x6", "6x8", "8x8"])
     lastdate="NEVER"
-    lastaverage="N/A"
+    lastaverage="0"
     prev_ave = prev_count = 0
     try:
         with open( name.lower()+".dat", 'r') as file:
