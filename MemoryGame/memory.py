@@ -7,7 +7,7 @@ import random, pygame, sys
 from typing import Never
 
 from pygame.locals import *
-from datetime import date
+from datetime import date, datetime
 
 FPS = 30 # frames per second, the general speed of the program
 WINDOWWIDTH = 640 # size of window's width in pixels
@@ -61,6 +61,7 @@ def main():
     lastdate="NEVER"
     lastaverage="0"
     prev_ave = prev_count = 0
+    today=str(date.today())
     try:
         with open( name.lower()+".dat", 'r') as file:
             print("File exists and is ready to read")
@@ -73,8 +74,15 @@ def main():
                     lastcount=data[2]
                     lastaverage=data[3]
         # If the player already played today, today's stats will be added
-        if lastdate == str(date.today()):
-            lastdate="TODAY"
+        # How many days since that level was played?
+        if lastdate != "NEVER":
+            days = (datetime.strptime(today, "%Y-%m-%d") - datetime.strptime(lastdate, "%Y-%m-%d")).days
+            if days == 0:
+                lastdate="today"
+            elif days == 1:
+                lastdate = "yesterday"
+            else:
+                lastdate = str(days)+" days ago"
             prev_ave = float(lastaverage)
             prev_count = int(lastcount)
         getButtons("Level last played on " + lastdate + " with average of " + str((int(float(lastaverage)*100))/100) + " tries", "Continue")
@@ -283,7 +291,7 @@ def getButtons(message, texts):
     while not done:
         for event in pygame.event.get():
             if event.type == MOUSEBUTTONUP:
-                print(mousex, mousey)
+                # print(mousex, mousey)
                 for i in range(nbButtons):
                     minx=btn_rect[i].x
                     miny=btn_rect[i].y
@@ -329,7 +337,7 @@ def getInput(message):
                         notDone = False
                     else:
                         user_text += event.unicode
-                        print(user_text)
+                        # print(user_text)
         pygame.draw.rect(DISPLAYSURF, pygame.Color('lightskyblue3'), input_rect)
         text_surface = base_font.render(user_text, True, (255, 255, 255))
 
@@ -347,7 +355,7 @@ def getInput(message):
         # clock.tick(60) means that for every second at most
         # 60 frames should be passed.
         FPSCLOCK.tick(FPS)
-    print("user_text should be returned:"+user_text)
+    # print("user_text should be returned:"+user_text)
     return user_text
 
 
