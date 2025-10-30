@@ -4,8 +4,6 @@
 # Released under a "Simplified BSD" license
 
 import random, pygame, sys
-from typing import Never
-
 from pygame.locals import *
 from datetime import date, datetime
 
@@ -43,83 +41,51 @@ SQUARE = 'square'
 DIAMOND = 'diamond'
 LINES = 'lines'
 OVAL = 'oval'
+name = ""
+prev_ave=0
 
 ALLCOLORS = (RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN)
 ALLSHAPES = (DONUT, SQUARE, DIAMOND, LINES, OVAL)
 
 def main():
-    global FPSCLOCK, DISPLAYSURF, BOARDWIDTH, BOARDHEIGHT, XMARGIN, YMARGIN
+    global name, FPSCLOCK, DISPLAYSURF, BOARDWIDTH, BOARDHEIGHT, XMARGIN, YMARGIN, prev_ave
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
     DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
 
     name = getInput("Enter your name")
-    count=0
-    games=0
-    stats=[]
-    size=getButtons("Select Game Size", ["2x4", "4x4", "4x6", "6x6", "6x8", "8x8"])
-    lastdate="NEVER"
-    lastaverage="0"
-    prev_ave = prev_count = 0
-    today=str(date.today())
-    try:
-        with open( name.lower()+".dat", 'r') as file:
-            print("File exists and is ready to read")
-            for line in file:
-                line = line.strip()
-                data = line.split(":")
-                # if len(data) is not 4, there's a problem with the file and we skip that line
-                if len(data) == 4 and int(data[0]) == size:
-                    lastdate=data[1]
-                    lastcount=data[2]
-                    lastaverage=data[3]
-        # If the player already played today, today's stats will be added
-        # How many days since that level was played?
-        if lastdate != "NEVER":
-            days = (datetime.strptime(today, "%Y-%m-%d") - datetime.strptime(lastdate, "%Y-%m-%d")).days
-            if days == 0:
-                lastdate="today"
-            elif days == 1:
-                lastdate = "yesterday"
-            else:
-                lastdate = str(days)+" days ago"
-            prev_ave = float(lastaverage)
-            prev_count = int(lastcount)
-        getButtons("Level last played on " + lastdate + " with average of " + str((int(float(lastaverage)*100))/100) + " tries", "Continue")
-    except FileNotFoundError:
-        getButtons("Welcome "+name+" as a new user ", ["OK"])
 
-
-    i = (size+3)%2
-    BOARDWIDTH = size+3+i  # number of columns of icons
-    BOARDHEIGHT = size+3-i  # number of rows of icons
-    XMARGIN = int((WINDOWWIDTH - (BOARDWIDTH * (BOXSIZE + GAPSIZE))) / 2)
-    YMARGIN = int((WINDOWHEIGHT - (BOARDHEIGHT * (BOXSIZE + GAPSIZE))) / 2)
-
-    # For text on top of the screen
-    BASICFONT = pygame.font.SysFont('chilanka', 32)
-    playerName = BASICFONT.render(name, True, WHITE)
-    playerNameRect = playerName.get_rect()
-    playerNameRect.topleft = (10, 10)
-    score = BASICFONT.render(str(count), True, WHITE)
-    scoreRect = score.get_rect()
-    scoreRect.topright = (WINDOWWIDTH - 10, 10)
-
-    mousex = 0 # used to store x coordinate of mouse event
-    mousey = 0 # used to store y coordinate of mouse event
-    pygame.display.set_caption('Memory Game')
-
-    mainBoard = getRandomizedBoard()
-    revealedBoxes = generateRevealedBoxesData(False)
-
-    firstSelection = None # stores the (x, y) of the first box clicked.
-
-    DISPLAYSURF.fill(BGCOLOR)
-    startGameAnimation(mainBoard)
+    newLevel = True
     playAgain = True
-    while playAgain: # main game loop
-        mouseClicked = False
+    while playAgain:  # main game loop
+        while newLevel:    # For text on top of the screen
+            count = 0
+            games = 0
+            stats = []
+            prev_ave = prev_count = 0
+            size = select_game()
+            BASICFONT = pygame.font.SysFont('chilanka', 32)
+            playerName = BASICFONT.render(name, True, WHITE)
+            playerNameRect = playerName.get_rect()
+            playerNameRect.topleft = (10, 10)
+            score = BASICFONT.render(str(count), True, WHITE)
+            scoreRect = score.get_rect()
+            scoreRect.topright = (WINDOWWIDTH - 10, 10)
 
+            mousex = 0 # used to store x coordinate of mouse event
+            mousey = 0 # used to store y coordinate of mouse event
+            pygame.display.set_caption('Memory Game')
+
+            mainBoard = getRandomizedBoard()
+            revealedBoxes = generateRevealedBoxesData(False)
+
+            firstSelection = None # stores the (x, y) of the first box clicked.
+
+            DISPLAYSURF.fill(BGCOLOR)
+            startGameAnimation(mainBoard)
+            newLevel = False
+
+        mouseClicked = False
         DISPLAYSURF.fill(BGCOLOR) # drawing the window
         drawBoard(mainBoard, revealedBoxes)
         DISPLAYSURF.blit(playerName, playerNameRect)
@@ -163,12 +129,12 @@ def main():
                         gameWonAnimation(mainBoard)
                         stats.append(count)
                         games += 1
-                        rc = getButtons("Your score is "+str(count)+". Play again?", ["Yes", "No"])
+                        mess = ["Your score is "+str(count), "Last average was "+str(prev_ave), "Play again?"]
+                        rc = getButtons(mess, ["Yes", "No"])
                         print(rc)
                         if rc == 1:
                             # Save the score and exit
-                            pygame.quit()
-                            playAgain = False
+                            newLevel = True
                             ave=0
                             for v in stats:
                                 ave += v
@@ -200,6 +166,50 @@ def main():
             pygame.display.update()
             FPSCLOCK.tick(FPS)
 
+def select_game():
+    global name, count, prev_ave, prev_count, BOARDWIDTH, BOARDHEIGHT, XMARGIN, YMARGIN
+    size=getButtons("Select Game Size", ["2x4", "4x4", "4x6", "6x6", "6x8", "8x8", "QUIT"])
+    if size == 6:
+        pygame.quit()
+        sys.exit(0)
+    lastdate="NEVER"
+    lastaverage="0"
+    prev_ave = prev_count = 0
+    today=str(date.today())
+    try:
+        with open( name.lower()+".dat", 'r') as file:
+            print("File exists and is ready to read")
+            for line in file:
+                line = line.strip()
+                data = line.split(":")
+                # if len(data) is not 4, there's a problem with the file and we skip that line
+                if len(data) == 4 and int(data[0]) == size:
+                    lastdate=data[1]
+                    lastcount=data[2]
+                    lastaverage=data[3]
+        # If the player already played today, today's stats will be added
+        # How many days since that level was played?
+        if lastdate != "NEVER":
+            days = (datetime.strptime(today, "%Y-%m-%d") - datetime.strptime(lastdate, "%Y-%m-%d")).days
+            if days == 0:
+                lastdate="today"
+                prev_ave = float(lastaverage)
+                prev_count = int(lastcount)
+            elif days == 1:
+                lastdate = "yesterday"
+            else:
+                lastdate = str(days)+" days ago"
+        getButtons("Level last played on " + lastdate + " with average of " + str((int(float(lastaverage)*100))/100) + " tries", "Continue")
+    except FileNotFoundError:
+        getButtons("Welcome "+name+" as a new user ", ["OK"])
+
+    i = (size+3)%2
+    BOARDWIDTH = size+3+i  # number of columns of icons
+    BOARDHEIGHT = size+3-i  # number of rows of icons
+    XMARGIN = int((WINDOWWIDTH - (BOARDWIDTH * (BOXSIZE + GAPSIZE))) / 2)
+    YMARGIN = int((WINDOWHEIGHT - (BOARDHEIGHT * (BOXSIZE + GAPSIZE))) / 2)
+
+    return size
 
 def getOkButton(message):
     DISPLAYSURF.fill((0,0,0))
@@ -248,17 +258,31 @@ def getOkButton(message):
         FPSCLOCK.tick(FPS)
 
 
-def getButtons(message, texts):
+def getButtons(mess, texts):
     DISPLAYSURF.fill((0,0,0))
     base_font = pygame.font.SysFont('', 32)
-    # create rectangle
-    mess_rect = pygame.Rect(200, 100, 140, 32)
-    text_surface = base_font.render(message, True, (255, 0, 255))
-    text_width = text_surface.get_width() + 10
-    mess_rect.w = max(100, text_width)
-    mess_rect.center=(WINDOWWIDTH/2, WINDOWHEIGHT/3)
-    DISPLAYSURF.blit(text_surface, (mess_rect.x + 5, mess_rect.y + 5))
-    pygame.display.flip()
+
+    # Is the message a list (many lines) or just one line?
+    if isinstance(mess, list):
+        numMess = len(mess)
+    else:
+        numMess = 1
+        mess = [mess]
+    messHeight = 32
+    btnHeight = 50
+    interspace = ( WINDOWHEIGHT - numMess*messHeight - btnHeight )/(numMess + 4)
+
+    # create rectangle(s) for message(s)
+    mess_rect=[]
+    for m in range(numMess):
+        mess_rect = pygame.Rect(200, 100, 140, messHeight)
+        text_surface = base_font.render(mess[m], True, (255, 0, 255))
+        text_width = text_surface.get_width() + 10
+        mess_rect.w = max(100, text_width)
+        messVertPos = int(2*interspace + messHeight/2 + (messHeight+interspace)*m)
+        mess_rect.center=(WINDOWWIDTH/2, messVertPos)
+        DISPLAYSURF.blit(text_surface, (mess_rect.x + 5, mess_rect.y + 5))
+        pygame.display.flip()
 
     # Image of buttons
     btn_img = pygame.image.load('Button.png')
@@ -271,12 +295,13 @@ def getButtons(message, texts):
         texts = [texts]
     nbButtons = len(texts)
     maxBtnWidth = (WINDOWWIDTH - (nbButtons+1)*spacing)/nbButtons
-    btnWidth=min(100, maxBtnWidth)
+    btnWidth=int(min(100, maxBtnWidth))
     delta = (btnWidth+spacing)/2
     for i in range(nbButtons):
-        btn_rect.append( pygame.Rect(200, 250, btnWidth, 50) )
-        btn_surf.append( pygame.transform.scale(btn_img, (btnWidth, 50)) )
-        btn_rect[i].center=(WINDOWWIDTH/2 - (nbButtons-1-2*i)*delta, WINDOWHEIGHT/2)
+        btn_rect.append( pygame.Rect(200, 250, btnWidth, btnHeight) )
+        btn_surf.append( pygame.transform.scale(btn_img, (btnWidth, btnHeight)) )
+        btnVertPos = int(WINDOWHEIGHT - 2*interspace - btnHeight/2)
+        btn_rect[i].center=(WINDOWWIDTH/2 - (nbButtons-1-2*i)*delta, btnVertPos)
         DISPLAYSURF.blit(btn_surf[i], btn_rect[i])
         # Write the text in the button
         txt_surf.append( base_font.render(texts[i], True, (255, 255, 255)) )
