@@ -42,13 +42,12 @@ DIAMOND = 'diamond'
 LINES = 'lines'
 OVAL = 'oval'
 name = ""
-prev_ave=0
 
 ALLCOLORS = (RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN)
 ALLSHAPES = (DONUT, SQUARE, DIAMOND, LINES, OVAL)
 
 def main():
-    global name, FPSCLOCK, DISPLAYSURF, BOARDWIDTH, BOARDHEIGHT, XMARGIN, YMARGIN, prev_ave
+    global name, FPSCLOCK, DISPLAYSURF, BOARDWIDTH, BOARDHEIGHT, XMARGIN, YMARGIN
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
     DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
@@ -63,7 +62,49 @@ def main():
             games = 0
             stats = []
             prev_ave = prev_count = 0
-            size = select_game()
+
+            size = getButtons("Select Game Size", ["2x4", "4x4", "4x6", "6x6", "6x8", "8x8", "QUIT"])
+            if size == 6:
+                pygame.quit()
+                sys.exit(0)
+            lastdate = "NEVER"
+            lastaverage = "0"
+            prev_ave = prev_count = 0
+            today = str(date.today())
+            try:
+                with open(name.lower() + ".dat", 'r') as file:
+                    # print("File exists and is ready to read")
+                    for line in file:
+                        line = line.strip()
+                        data = line.split(":")
+                        # if len(data) is not 4, there's a problem with the file and we skip that line
+                        if len(data) == 4 and int(data[0]) == size:
+                            lastdate = data[1]
+                            lastcount = data[2]
+                            lastaverage = data[3]
+                # If the player already played today, today's stats will be added
+                # How many days since that level was played?
+                if lastdate != "NEVER":
+                    days = (datetime.strptime(today, "%Y-%m-%d") - datetime.strptime(lastdate, "%Y-%m-%d")).days
+                    if days == 0:
+                        lastdate = "today"
+                        prev_ave = float(lastaverage)
+                        prev_count = int(lastcount)
+                    elif days == 1:
+                        lastdate = "yesterday"
+                    else:
+                        lastdate = str(days) + " days ago"
+                getButtons("Level last played on " + lastdate + " with average of " + str(
+                    (int(float(lastaverage) * 100)) / 100) + " tries", "Continue")
+            except FileNotFoundError:
+                getButtons("Welcome " + name + " as a new user ", ["OK"])
+
+            i = (size + 3) % 2
+            BOARDWIDTH = size + 3 + i  # number of columns of icons
+            BOARDHEIGHT = size + 3 - i  # number of rows of icons
+            XMARGIN = int((WINDOWWIDTH - (BOARDWIDTH * (BOXSIZE + GAPSIZE))) / 2)
+            YMARGIN = int((WINDOWHEIGHT - (BOARDHEIGHT * (BOXSIZE + GAPSIZE))) / 2)
+
             BASICFONT = pygame.font.SysFont('chilanka', 32)
             playerName = BASICFONT.render(name, True, WHITE)
             playerNameRect = playerName.get_rect()
@@ -129,17 +170,25 @@ def main():
                         gameWonAnimation(mainBoard)
                         stats.append(count)
                         games += 1
-                        mess = ["Your score is "+str(count), "Last average was "+str(prev_ave), "Play again?"]
+
+                        # Calculate current average
+                        ave = 0
+                        for v in stats:
+                            ave += v
+                        nbGames = len(stats) + prev_count
+                        ave = (ave + prev_ave * prev_count) / nbGames
+
+                        if lastdate == "NEVER":
+                            mess = ["Your score is " + str(count), "Play again?"]
+                        elif lastdate == "today":
+                            mess = ["Your score is "+str(count), "Today you've played "+str(nbGames)+" times with an average of "+str(int(ave*100)/100), "Play again?"]
+                        else:
+                            mess = ["Your score is "+str(count), lastdate+" you've played "+str(lastcount)+" times with an average of "+str(int(float(lastaverage)*100)/100), "Play again?"]
                         rc = getButtons(mess, ["Yes", "No"])
                         print(rc)
                         if rc == 1:
                             # Save the score and exit
                             newLevel = True
-                            ave=0
-                            for v in stats:
-                                ave += v
-                            nbGames = len(stats) + prev_count
-                            ave = (ave+prev_ave*prev_count)/nbGames
                             with open(name.lower() + ".dat", 'a') as file:
                                 file.write(str(size)+":"+ str(date.today())+":"+str(nbGames)+":"+str(ave)+"\n")
 
@@ -166,50 +215,6 @@ def main():
             pygame.display.update()
             FPSCLOCK.tick(FPS)
 
-def select_game():
-    global name, count, prev_ave, prev_count, BOARDWIDTH, BOARDHEIGHT, XMARGIN, YMARGIN
-    size=getButtons("Select Game Size", ["2x4", "4x4", "4x6", "6x6", "6x8", "8x8", "QUIT"])
-    if size == 6:
-        pygame.quit()
-        sys.exit(0)
-    lastdate="NEVER"
-    lastaverage="0"
-    prev_ave = prev_count = 0
-    today=str(date.today())
-    try:
-        with open( name.lower()+".dat", 'r') as file:
-            print("File exists and is ready to read")
-            for line in file:
-                line = line.strip()
-                data = line.split(":")
-                # if len(data) is not 4, there's a problem with the file and we skip that line
-                if len(data) == 4 and int(data[0]) == size:
-                    lastdate=data[1]
-                    lastcount=data[2]
-                    lastaverage=data[3]
-        # If the player already played today, today's stats will be added
-        # How many days since that level was played?
-        if lastdate != "NEVER":
-            days = (datetime.strptime(today, "%Y-%m-%d") - datetime.strptime(lastdate, "%Y-%m-%d")).days
-            if days == 0:
-                lastdate="today"
-                prev_ave = float(lastaverage)
-                prev_count = int(lastcount)
-            elif days == 1:
-                lastdate = "yesterday"
-            else:
-                lastdate = str(days)+" days ago"
-        getButtons("Level last played on " + lastdate + " with average of " + str((int(float(lastaverage)*100))/100) + " tries", "Continue")
-    except FileNotFoundError:
-        getButtons("Welcome "+name+" as a new user ", ["OK"])
-
-    i = (size+3)%2
-    BOARDWIDTH = size+3+i  # number of columns of icons
-    BOARDHEIGHT = size+3-i  # number of rows of icons
-    XMARGIN = int((WINDOWWIDTH - (BOARDWIDTH * (BOXSIZE + GAPSIZE))) / 2)
-    YMARGIN = int((WINDOWHEIGHT - (BOARDHEIGHT * (BOXSIZE + GAPSIZE))) / 2)
-
-    return size
 
 def getOkButton(message):
     DISPLAYSURF.fill((0,0,0))
