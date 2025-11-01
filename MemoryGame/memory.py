@@ -3,7 +3,7 @@
 # http://inventwithpython.com/pygame
 # Released under a "Simplified BSD" license
 
-import random, pygame, sys
+import random, pygame, sys, os
 from pygame.locals import *
 from datetime import date, datetime
 
@@ -46,6 +46,14 @@ name = ""
 ALLCOLORS = (RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN)
 ALLSHAPES = (DONUT, SQUARE, DIAMOND, LINES, OVAL)
 
+# Check that the directory where score are recorded exists
+dirname = os.path.expanduser("~")+"/.local/"
+if not os.path.isdir(dirname):
+    os.mkdir(dirname)
+dirname += "memory_scores/"
+if not os.path.isdir(dirname):
+    os.mkdir(dirname)
+
 def main():
     global name, FPSCLOCK, DISPLAYSURF, BOARDWIDTH, BOARDHEIGHT, XMARGIN, YMARGIN
     pygame.init()
@@ -53,6 +61,7 @@ def main():
     DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
 
     name = getInput("Enter your name")
+    filename = dirname+name.lower()+".dat"
 
     newLevel = True
     playAgain = True
@@ -72,7 +81,7 @@ def main():
             prev_ave = prev_count = 0
             today = str(date.today())
             try:
-                with open(name.lower() + ".dat", 'r') as file:
+                with open(filename, 'r') as file:
                     # print("File exists and is ready to read")
                     for line in file:
                         line = line.strip()
@@ -189,7 +198,7 @@ def main():
                         if rc == 1:
                             # Save the score and exit
                             newLevel = True
-                            with open(name.lower() + ".dat", 'a') as file:
+                            with open(filename, 'a') as file:
                                 file.write(str(size)+":"+ str(date.today())+":"+str(nbGames)+":"+str(ave)+"\n")
 
                         else:
