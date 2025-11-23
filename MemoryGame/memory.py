@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # Memory Puzzle
 # By Al Sweigart al@inventwithpython.com
 # http://inventwithpython.com/pygame
@@ -53,9 +55,10 @@ if not os.path.isdir(dirname):
 dirname += "memory_scores/"
 if not os.path.isdir(dirname):
     os.mkdir(dirname)
+progdir = os.path.dirname(__file__)
 
 def main():
-    global name, FPSCLOCK, DISPLAYSURF, BOARDWIDTH, BOARDHEIGHT, XMARGIN, YMARGIN
+    global name, FPSCLOCK, DISPLAYSURF, BOARDWIDTH, BOARDHEIGHT, XMARGIN, YMARGIN, progdir
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
     DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
@@ -226,6 +229,7 @@ def main():
 
 
 def getOkButton(message):
+    global progdir
     DISPLAYSURF.fill((0,0,0))
     base_font = pygame.font.SysFont('', 32)
     # create rectangle
@@ -238,7 +242,7 @@ def getOkButton(message):
     pygame.display.flip()
 
     # Image of button
-    btn_img = pygame.image.load('Button.png')
+    btn_img = pygame.image.load(progdir+'/Button.png')
     btn_surface = pygame.transform.scale(btn_img, (100, 50))
     btn_rect = pygame.Rect(200, 250, 100, 50)
     btn_rect.center=(WINDOWWIDTH/2, WINDOWHEIGHT/2)
@@ -273,6 +277,7 @@ def getOkButton(message):
 
 
 def getButtons(mess, texts):
+    global progdir
     DISPLAYSURF.fill((0,0,0))
     base_font = pygame.font.SysFont('', 32)
 
@@ -299,7 +304,7 @@ def getButtons(mess, texts):
         pygame.display.flip()
 
     # Image of buttons
-    btn_img = pygame.image.load('Button.png')
+    btn_img = pygame.image.load(progdir+'/Button.png')
     btn_surf=[]
     btn_rect=[]
     txt_surf=[]
