@@ -10,7 +10,7 @@ step_mode = True
 number_of_solutions = 0
 value = ""
 grid = [[]]
-grid_size=0
+grid_size = 0
 designed = False
 numcol = 4
 
