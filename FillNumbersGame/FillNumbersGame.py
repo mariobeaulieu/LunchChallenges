@@ -168,7 +168,7 @@ def interactive_play():
     list_of_numbers = copy_list_of_lists(game.num_list)
     # Then draw the screen as arrows of buttons that call back set_value defined above
     root = tk.Tk()
-    root.title("Interactive Play")
+    root.title(game.filename)
     grid_size = len(game.grid)
     labels_of_numbers=[tk.Label(root) for i in range(numcol)]
     fgcol = "black"
